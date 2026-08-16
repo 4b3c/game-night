@@ -1,0 +1,44 @@
+# Game Night — one container, published on localhost only.
+#
+#   docker compose up -d --build      start (or apply changes after a git pull)
+#   docker compose logs -f            watch it
+#   docker compose down               stop
+#
+# Your existing nginx/Traefik terminates TLS and proxies to 127.0.0.1:5050.
+# Websocket upgrade headers are required — see DEPLOY.md for ready-made snippets.
+#
+# Settings come from a .env file next to this one (copy .env.example). Every value has a
+# working default, so it runs without one.
+
+services:
+  app:
+    build: .
+    image: game-night:local
+    container_name: game-night
+    restart: unless-stopped
+
+    environment:
+      # Set this so player cookies survive a restart: openssl rand -hex 32
+      SECRET_KEY: ${SECRET_KEY:-}
+      # Trust one hop of X-Forwarded-* — you are behind a proxy.
+      GN_BEHIND_PROXY: ${GN_BEHIND_PROXY:-1}
+      # Flip to 1 once HTTPS works. While it's 1, browsers refuse the cookie over
+      # plain http, and nobody can join.
+      GN_COOKIE_SECURE: ${GN_COOKIE_SECURE:-0}
+      # Seconds a room survives after the last person leaves.
+      GN_ROOM_IDLE_TIMEOUT: ${GN_ROOM_IDLE_TIMEOUT:-600}
+
+    # Localhost only: the proxy reaches it, the internet does not.
+    ports:
+      - "127.0.0.1:${HOST_PORT:-5050}:5050"
+
+    # Swap in your own GIFs without rebuilding: drop .gif files in a folder on the host,
+    # run scripts/scan_gifs.py to write its manifest.json, then uncomment this.
+    # volumes:
+    #   - ./app/static/gifs:/app/app/static/gifs:ro
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

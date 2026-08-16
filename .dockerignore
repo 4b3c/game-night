@@ -1,0 +1,22 @@
+.git
+.gitignore
+.venv
+venv
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.DS_Store
+
+# not needed to run the game
+tests
+node_modules
+package.json
+package-lock.json
+tailwind.config.js
+DEPLOY.md
+README.md
+.env
+.env.*
+!.env.example

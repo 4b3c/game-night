@@ -1,0 +1,10 @@
+# Production server. Used by the Docker image.
+#
+# gevent + gevent-websocket give Flask-SocketIO real websockets under gunicorn. One
+# worker only: rooms live in this process's memory, so a second worker would serve
+# players a different game with the same code.
+-r requirements.txt
+
+gunicorn==23.0.0
+gevent==24.11.1
+gevent-websocket==0.10.1
