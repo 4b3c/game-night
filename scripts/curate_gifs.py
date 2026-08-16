@@ -161,27 +161,62 @@ class TenorSource:
 SOURCES = {"giphy": GiphySource, "tenor": TenorSource}
 
 
+def load_dotenv() -> None:
+    """Read .env for convenience, without overriding anything already in the environment.
+
+    .env is gitignored, so an API key lives there rather than in your shell history or,
+    worse, a committed file.
+    """
+    path = ROOT / ".env"
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        os.environ.setdefault(key.strip(), value.strip().strip("'\""))
+
+
 def _get_json(url: str) -> dict:
     request_obj = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(request_obj, timeout=20) as response:
         return json.loads(response.read())
 
 
+# A card is roughly 400px wide on a phone (800 physical), and a hand of seven plus a table
+# of seven all load at once — often on someone's mobile data. So: aim for a middle-sized
+# rendition rather than taking whatever Giphy lists first, which swung between a blurry
+# 220px and a 1.7MB monster for neighbouring GIFs.
+TARGET_WIDTH = 480
+MAX_BYTES = 1_500_000
+
+
 def _pick_giphy_rendition(images: dict) -> str | None:
-    """Big enough to look good on a phone card, small enough to load instantly."""
-    for name in ("downsized", "fixed_width", "downsized_medium", "fixed_height", "original"):
-        candidate = images.get(name) or {}
-        url = candidate.get("url")
-        if not url:
+    """The rendition closest to card size that still downloads quickly."""
+    options = []
+    for name, data in (images or {}).items():
+        if "still" in name or not isinstance(data, dict):
             continue
+        url = data.get("url")
+        if not url or ".gif" not in url.split("?")[0]:
+            continue  # skips the mp4/webp renditions
         try:
-            size = int(candidate.get("size") or 0)
+            width = int(data.get("width") or 0)
+            size = int(data.get("size") or 0)
         except ValueError:
-            size = 0
-        if size and size > 3_000_000:
-            continue
-        return url.split("?")[0]
-    return None
+            width, size = 0, 0
+        options.append({"name": name, "url": url.split("?")[0], "width": width, "size": size})
+    if not options:
+        return None
+
+    affordable = [o for o in options if o["size"] and o["size"] <= MAX_BYTES] or options
+    best = min(
+        affordable,
+        # closest to card width; break ties on the smaller file
+        key=lambda o: (abs((o["width"] or 9999) - TARGET_WIDTH), o["size"] or 10**9),
+    )
+    return best["url"]
 
 
 # --- persistence ---------------------------------------------------------------
@@ -477,6 +512,7 @@ def main() -> int:
     parser.add_argument("--host", default="127.0.0.1")
     args = parser.parse_args()
 
+    load_dotenv()
     source_class = SOURCES[args.source]
     api_key = args.api_key or os.environ.get(source_class.key_env, "").strip()
     if not api_key:

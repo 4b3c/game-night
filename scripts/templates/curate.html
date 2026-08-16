@@ -37,7 +37,12 @@
     }
     .tally { display: flex; gap: 8px; flex-wrap: wrap; }
     .tally span {
-      padding: 5px 12px;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 3px;
+      overflow: hidden;          /* keep the progress bar inside the pill */
+      padding: 5px 12px 6px;
       border: var(--gn-outline-sm) solid var(--gn-outline-color);
       border-radius: var(--gn-radius-pill);
       background: var(--gn-bg-2);
@@ -95,8 +100,15 @@
     .btn--skip { background: var(--gn-bg-3); color: var(--gn-ink); }
     .btn--adult { background: var(--gn-accent-2); color: var(--gn-accent-2-ink); }
     .btn--millennial { background: var(--gn-accent-1); color: var(--gn-accent-1-ink); }
-    .bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.14); overflow: hidden; margin-top: 4px; }
-    .bar i { display: block; height: 100%; background: currentColor; }
+    .bar {
+      display: block;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(0, 0, 0, .22);
+      overflow: hidden;
+    }
+    .bar i { display: block; height: 100%; background: currentColor; opacity: .75; }
 
     .row { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
     .hint { color: var(--gn-ink-dim); font-size: .82rem; }
