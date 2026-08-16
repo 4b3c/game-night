@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="space-y-10">
+
+  <!-- HEADER -->
+  <header>
+    <h1 class="text-3xl font-bold tracking-tight">Example UI Library</h1>
+    <p class="text-slate-400">A showcase of useful, reusable components for any Flask + Tailwind app.</p>
+  </header>
+
+  <!-- GRID OF CARDS -->
+  <div class="grid gap-6 md:grid-cols-2">
+
+    <!-- BUTTONS -->
+    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl shadow-black/30">
+      <h2 class="text-lg font-semibold mb-3">Buttons</h2>
+      <div class="flex flex-wrap gap-3">
+        <button class="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-sm font-medium">Primary</button>
+        <button class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-medium">Dark</button>
+        <button class="px-4 py-2 rounded-lg border border-slate-600 text-sm font-medium hover:bg-slate-800">Outline</button>
+        <button class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-medium">Success</button>
+        <button class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-sm font-medium">Danger</button>
+      </div>
+    </div>
+
+    <!-- INPUTS + TOGGLES -->
+    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl shadow-black/30">
+      <h2 class="text-lg font-semibold mb-3">Inputs + Toggles</h2>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Email</label>
+          <input type="email" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm focus:ring-sky-500 focus:ring-2" placeholder="you@example.com">
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Select</label>
+          <select class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm">
+            <option>Option One</option>
+            <option>Option Two</option>
+            <option>Option Three</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-slate-400">Notifications</span>
+          <div class="w-10 h-5 flex items-center bg-slate-700 rounded-full p-1 cursor-pointer">
+            <div class="bg-white w-4 h-4 rounded-full shadow"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BADGES + TAGS -->
+    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl shadow-black/30">
+      <h2 class="text-lg font-semibold mb-3">Badges & Tags</h2>
+      <div class="flex flex-wrap gap-2">
+        <span class="px-2 py-1 text-xs rounded bg-sky-700/40 border border-sky-700 text-sky-300">Info</span>
+        <span class="px-2 py-1 text-xs rounded bg-emerald-700/40 border border-emerald-700 text-emerald-300">Success</span>
+        <span class="px-2 py-1 text-xs rounded bg-amber-700/40 border border-amber-700 text-amber-300">Warning</span>
+        <span class="px-2 py-1 text-xs rounded bg-rose-700/40 border border-rose-700 text-rose-300">Error</span>
+        <span class="px-2 py-1 text-xs rounded bg-slate-700/40 border border-slate-600 text-slate-300">Neutral</span>
+      </div>
+    </div>
+
+    <!-- ALERTS -->
+    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl shadow-black/30 space-y-3">
+      <h2 class="text-lg font-semibold">Alerts</h2>
+
+      <div class="p-3 rounded-lg bg-sky-900/50 border border-sky-700 text-sky-300 text-sm">Info alert — something neutral happened.</div>
+      <div class="p-3 rounded-lg bg-emerald-900/50 border border-emerald-700 text-emerald-300 text-sm">Success alert — good job!</div>
+      <div class="p-3 rounded-lg bg-amber-900/50 border border-amber-700 text-amber-300 text-sm">Warning — be careful.</div>
+      <div class="p-3 rounded-lg bg-rose-900/50 border border-rose-700 text-rose-300 text-sm">Error — something went wrong.</div>
+    </div>
+
+    <!-- CARDS WITH IMAGE -->
+    <div class="rounded-xl border border-slate-800 bg-slate-900/60 shadow-xl shadow-black/30 overflow-hidden">
+      <img src="https://picsum.photos/600/300" class="w-full h-40 object-cover">
+      <div class="p-5 space-y-2">
+        <h2 class="font-semibold text-lg">Image Card</h2>
+        <p class="text-sm text-slate-400">A simple card with an image header.</p>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl shadow-black/30">
+      <h2 class="text-lg font-semibold mb-3">Stats</h2>
+      <div class="grid grid-cols-3 gap-3 text-center">
+        <div class="p-3 rounded-lg bg-slate-800">
+          <div class="text-2xl font-bold">42</div>
+          <div class="text-xs text-slate-400">Users</div>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-800">
+          <div class="text-2xl font-bold">12k</div>
+          <div class="text-xs text-slate-400">Views</div>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-800">
+          <div class="text-2xl font-bold">$890</div>
+          <div class="text-xs text-slate-400">Revenue</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl shadow-black/30">
+      <h2 class="text-lg font-semibold mb-3">Table</h2>
+      <table class="w-full text-sm">
+        <thead class="text-slate-400 border-b border-slate-700">
+          <tr>
+            <th class="text-left py-2">Name</th>
+            <th class="text-left">Role</th>
+            <th class="text-left">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800">
+          <tr>
+            <td class="py-2">Alice</td>
+            <td>Engineer</td>
+            <td><span class="text-emerald-400">Active</span></td>
+          </tr>
+          <tr>
+            <td class="py-2">Bob</td>
+            <td>Designer</td>
+            <td><span class="text-amber-400">Pending</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ACCORDION -->
+    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl shadow-black/30 space-y-3">
+      <h2 class="text-lg font-semibold">Accordion</h2>
+      <details class="bg-slate-800 rounded-lg p-3">
+        <summary class="cursor-pointer text-sm font-medium">What is this?</summary>
+        <p class="text-slate-400 mt-2 text-sm">An accessible accordion using &lt;details&gt;.</p>
+      </details>
+      <details class="bg-slate-800 rounded-lg p-3">
+        <summary class="cursor-pointer text-sm font-medium">Why Tailwind?</summary>
+        <p class="text-slate-400 mt-2 text-sm">Because it keeps UI consistent and fast to build.</p>
+      </details>
+    </div>
+
+    <!-- CODE BLOCK -->
+    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl shadow-black/30">
+      <h2 class="text-lg font-semibold mb-3">Code Block</h2>
+      <pre class="bg-slate-800 p-3 rounded-lg text-sm overflow-x-auto"><code>const msg = "Hello world";
+console.log(msg);</code></pre>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl shadow-black/30 space-y-3">
+      <h2 class="text-lg font-semibold">Progress Bar</h2>
+      <div class="w-full h-3 bg-slate-800 rounded-lg overflow-hidden">
+        <div class="h-full bg-sky-500" style="width: 65%"></div>
+      </div>
+    </div>
+
+  </div>
+
+</section>
+{% endblock %}

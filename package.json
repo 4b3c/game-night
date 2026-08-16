@@ -1,0 +1,12 @@
+{
+    "name": "flask-tailwind-starter",
+    "private": true,
+    "scripts": {
+      "dev": "npx tailwindcss -i ./app/static/src/input.css -o ./app/static/dist/tailwind.css --watch",
+      "build": "npx tailwindcss -i ./app/static/src/input.css -o ./app/static/dist/tailwind.css --minify"
+    },
+    "devDependencies": {
+      "tailwindcss": "^3.4.0"
+    }
+  }
+  
