@@ -211,3 +211,12 @@ node_modules/
 # local deployment settings (secrets)
 .env
 !.env.example
+
+# curated GIFs stay out of git: they came from someone else API and this repo is public.
+# rsync them to the server instead (scripts/push_gifs.sh).
+app/static/gifs/*.gif
+!app/static/gifs/gif_[0-9][0-9][0-9].gif
+
+# local curation state and per-server compose tweaks
+/curation/
+docker-compose.override.yml

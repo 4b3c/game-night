@@ -18,7 +18,16 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable
 
-from .decks import Deck, build_gif_deck, build_prompt_deck, gif_index, prompt_index
+from .decks import (
+    DEFAULT_MODE,
+    MODES,
+    Deck,
+    build_gif_deck,
+    build_prompt_deck,
+    gif_index,
+    mode_counts,
+    prompt_index,
+)
 
 # --- tuning knobs -------------------------------------------------------------
 HAND_SIZE = 7
@@ -71,6 +80,8 @@ class ActionError(Exception):
 # --- options ------------------------------------------------------------------
 @dataclass
 class Options:
+    # The one setting most tables will touch: which set of GIFs is in play.
+    mode: str = DEFAULT_MODE  # see decks.MODES
     judge_rotation: str = "circle"  # "circle" | "last_winner"
     target_score: int = DEFAULT_TARGET_SCORE
     prompt_seconds: int = DEFAULT_PROMPT_SECONDS  # 0 = no timer
@@ -83,6 +94,7 @@ class Options:
 
     def to_dict(self) -> dict:
         return {
+            "mode": self.mode,
             "judge_rotation": self.judge_rotation,
             "target_score": self.target_score,
             "prompt_seconds": self.prompt_seconds,
@@ -93,6 +105,11 @@ class Options:
 
     def update(self, raw: dict) -> None:
         """Apply a partial dict of untrusted input, clamping everything."""
+        if "mode" in raw:
+            value = str(raw["mode"])
+            if value not in MODES:
+                raise ActionError("Unknown game mode")
+            self.mode = value
         if "judge_rotation" in raw:
             value = str(raw["judge_rotation"])
             if value not in ("circle", "last_winner"):
@@ -305,12 +322,14 @@ class Game:
         # deck is big enough *before* touching anyone's hand: running dry halfway would
         # otherwise leave a half-dealt game. This matters when you swap the filler GIFs
         # for your own — eight players need 56 distinct cards.
-        gif_deck = build_gif_deck(self._rng)
+        gif_deck = build_gif_deck(self._rng, self.options.mode)
         needed = len(self.players) * HAND_SIZE
         if len(gif_deck) < needed:
+            mode_label = MODES[self.options.mode]["label"]
             raise ActionError(
-                f"Only {len(gif_deck)} GIFs installed — {len(self.players)} players need "
-                f"{needed}. Add more to app/static/gifs and run scripts/scan_gifs.py."
+                f"{mode_label} mode only has {len(gif_deck)} GIFs — {len(self.players)} "
+                f"players need {needed}. Curate more with scripts/curate_gifs.py, or pick "
+                f"another mode."
             )
         hands = {pid: gif_deck.draw_many(HAND_SIZE) for pid in self.players}
 
@@ -636,6 +655,7 @@ class Game:
 
     def public_state(self) -> dict:
         prompts = prompt_index()
+        counts = mode_counts()
         waiting_on = [
             {"nickname": p.nickname, "avatar": p.avatar, "connected": p.connected}
             for p in self._non_judge_players()
@@ -664,6 +684,16 @@ class Game:
             "tv_connected": self.tv_count > 0,
             "min_players": self.options.min_players,
             "max_players": MAX_PLAYERS,
+            "modes": [
+                {
+                    "id": name,
+                    "label": meta["label"],
+                    "emoji": meta["emoji"],
+                    "cards": counts.get(name, 0),
+                    "enough": counts.get(name, 0) >= max(len(self.players), MIN_PLAYERS) * HAND_SIZE,
+                }
+                for name, meta in MODES.items()
+            ],
             "can_start": len(self.players) >= self.options.min_players,
             "prompt_count": len(prompts),
         }

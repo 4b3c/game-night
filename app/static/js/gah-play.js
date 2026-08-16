@@ -39,6 +39,7 @@
   let lastPanel = null;
   let lastStrip = null;
   let tableKey = null;
+  let moreOpen = false; // the "More settings" disclosure, kept across re-renders
 
   const conn = new GN.Connection({
     joinPayload: function () {
@@ -445,7 +446,45 @@
     );
   }
 
-  function optionsHtml(editable) {
+  function modeName(id) {
+    const found = ((state && state.modes) || []).filter(function (m) { return m.id === id; })[0];
+    return found ? found.emoji + ' ' + found.label : id;
+  }
+
+  /** The one decision that matters, up front: which set of GIFs are we playing with. */
+  function modePickerHtml(editable) {
+    const chosen = state.options.mode;
+    const modes = state.modes || [];
+    if (!editable) {
+      return '<p class="modeshown">Mode: <b>' + esc(modeName(chosen)) + '</b></p>';
+    }
+    return (
+      '<div class="option">' +
+        '<span class="option__label">Game mode</span>' +
+        '<div class="modes">' +
+          modes
+            .map(function (m) {
+              const on = m.id === chosen;
+              // A mode with too few curated GIFs can't be played yet — say so instead of
+              // failing at Start.
+              return (
+                '<button class="mode' + (on ? ' mode--on' : '') + (m.enough ? '' : ' mode--empty') + '"' +
+                ' data-opt="mode" data-value="' + esc(m.id) + '" aria-pressed="' + (on ? 'true' : 'false') + '"' +
+                (m.enough ? '' : ' disabled title="Not enough GIFs curated for this mode yet"') +
+                ' type="button">' +
+                  '<span class="mode__emoji" aria-hidden="true">' + esc(m.emoji) + '</span>' +
+                  '<span class="mode__label">' + esc(m.label) + '</span>' +
+                  '<span class="mode__cards">' + (m.enough ? m.cards + ' GIFs' : (m.cards ? 'only ' + m.cards : 'none yet')) + '</span>' +
+                '</button>'
+              );
+            })
+            .join('') +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function moreSettingsHtml() {
     const o = state.options;
     const timerOpts = function (values, current) {
       return values
@@ -455,42 +494,48 @@
         })
         .join('');
     };
-    if (!editable) {
-      return (
-        '<ul class="optsummary">' +
-          '<li>Judge: <b>' + (o.judge_rotation === 'circle' ? 'in a circle' : 'last round\'s winner') + '</b></li>' +
-          '<li>First to <b>' + o.target_score + '</b> points</li>' +
-          '<li>Prompt pick: <b>' + (o.prompt_seconds ? o.prompt_seconds + 's' : 'no timer') + '</b></li>' +
-          '<li>Answers: <b>' + (o.submit_seconds ? o.submit_seconds + 's' : 'no timer') + '</b></li>' +
-        '</ul>'
-      );
-    }
     return (
-      '<div class="options">' +
-        '<div class="option">' +
-          '<span class="option__label">Who judges next?</span>' +
-          '<div class="segmented">' +
-            '<button class="seg' + (o.judge_rotation === 'circle' ? ' seg--on' : '') + '" data-opt="judge_rotation" data-value="circle" type="button">Circle</button>' +
-            '<button class="seg' + (o.judge_rotation === 'last_winner' ? ' seg--on' : '') + '" data-opt="judge_rotation" data-value="last_winner" type="button">Last winner</button>' +
+      '<div class="more">' +
+        '<button class="more__toggle" data-action="toggle-more" aria-expanded="' + (moreOpen ? 'true' : 'false') + '" type="button">' +
+          '⚙︎ More settings' +
+        '</button>' +
+        '<div class="more__body options"' + (moreOpen ? '' : ' hidden') + '>' +
+          '<div class="option">' +
+            '<span class="option__label">Who judges next?</span>' +
+            '<div class="segmented">' +
+              '<button class="seg" data-opt="judge_rotation" data-value="circle" aria-pressed="' + (o.judge_rotation === 'circle' ? 'true' : 'false') + '" type="button">Circle</button>' +
+              '<button class="seg" data-opt="judge_rotation" data-value="last_winner" aria-pressed="' + (o.judge_rotation === 'last_winner' ? 'true' : 'false') + '" type="button">Last winner</button>' +
+            '</div>' +
           '</div>' +
+          '<div class="option">' +
+            '<label class="option__label" for="opt-score">Points to win — <b id="score-out">' + o.target_score + '</b></label>' +
+            '<input id="opt-score" class="slider" type="range" data-opt="target_score" min="' + root.dataset.scoreMin + '" max="' + root.dataset.scoreMax + '" value="' + o.target_score + '">' +
+          '</div>' +
+          '<div class="option option--pair">' +
+            '<label class="option__label" for="opt-prompt">Prompt pick</label>' +
+            '<select id="opt-prompt" class="select" data-opt="prompt_seconds">' + timerOpts([0, 5, 10, 15, 20, 30], o.prompt_seconds) + '</select>' +
+          '</div>' +
+          '<div class="option option--pair">' +
+            '<label class="option__label" for="opt-submit">Answer time</label>' +
+            '<select id="opt-submit" class="select" data-opt="submit_seconds">' + timerOpts([0, 30, 45, 60, 90, 120, 180], o.submit_seconds) + '</select>' +
+          '</div>' +
+          '<label class="checkline">' +
+            '<input type="checkbox" data-opt="test_mode"' + (o.test_mode ? ' checked' : '') + '>' +
+            '<span>Test mode — start with just ' + root.dataset.testMinPlayers + ' players</span>' +
+          '</label>' +
         '</div>' +
-        '<div class="option">' +
-          '<label class="option__label" for="opt-score">Points to win — <b id="score-out">' + o.target_score + '</b></label>' +
-          '<input id="opt-score" class="slider" type="range" data-opt="target_score" min="' + root.dataset.scoreMin + '" max="' + root.dataset.scoreMax + '" value="' + o.target_score + '">' +
-        '</div>' +
-        '<div class="option option--pair">' +
-          '<label class="option__label" for="opt-prompt">Prompt pick</label>' +
-          '<select id="opt-prompt" class="select" data-opt="prompt_seconds">' + timerOpts([0, 5, 10, 15, 20, 30], o.prompt_seconds) + '</select>' +
-        '</div>' +
-        '<div class="option option--pair">' +
-          '<label class="option__label" for="opt-submit">Answer time</label>' +
-          '<select id="opt-submit" class="select" data-opt="submit_seconds">' + timerOpts([0, 30, 45, 60, 90, 120, 180], o.submit_seconds) + '</select>' +
-        '</div>' +
-        '<label class="checkline">' +
-          '<input type="checkbox" data-opt="test_mode"' + (o.test_mode ? ' checked' : '') + '>' +
-          '<span>Test mode — start with just ' + root.dataset.testMinPlayers + ' players</span>' +
-        '</label>' +
       '</div>'
+    );
+  }
+
+  function settingsSummaryHtml() {
+    const o = state.options;
+    return (
+      '<ul class="optsummary">' +
+        '<li>First to <b>' + o.target_score + '</b> points</li>' +
+        '<li>Judge: <b>' + (o.judge_rotation === 'circle' ? 'in a circle' : "last round's winner") + '</b></li>' +
+        '<li>Answers: <b>' + (o.submit_seconds ? o.submit_seconds + 's' : 'no timer') + '</b></li>' +
+      '</ul>'
     );
   }
 
@@ -505,11 +550,12 @@
         '<p class="panel__code">Code <b>' + CODE + '</b> · ' + count + '/' + state.max_players + ' players</p>' +
         lobbyListHtml(you.is_host) +
         (you.is_host
-          ? optionsHtml(true) +
+          ? modePickerHtml(true) +
+            moreSettingsHtml() +
             '<button class="btn btn--big btn--go" data-action="start"' + (canStart ? '' : ' disabled') + ' type="button">' +
               (canStart ? 'Start game' : 'Need ' + (need - count) + ' more player' + (need - count === 1 ? '' : 's')) +
             '</button>'
-          : optionsHtml(false) +
+          : modePickerHtml(false) + settingsSummaryHtml() +
             '<p class="panel__hint">Waiting for the host to start' +
               (canStart ? '…' : ' — ' + (need - count) + ' more player' + (need - count === 1 ? '' : 's') + ' needed') +
             '</p>') +
@@ -793,7 +839,7 @@
     Array.prototype.forEach.call(panel.querySelectorAll('[data-opt]'), function (node) {
       const key = node.dataset.opt;
       if (node.tagName === 'BUTTON') {
-        if (node.classList.contains('seg--on')) out[key] = node.dataset.value;
+        if (node.getAttribute('aria-pressed') === 'true') out[key] = node.dataset.value;
       } else if (node.type === 'checkbox') {
         out[key] = node.checked;
       } else {
@@ -815,11 +861,20 @@
     }
 
     if (hit.dataset.opt && hit.dataset.value) {
-      // Segmented control: flip it locally, then tell the server.
+      // Mode picker / segmented control: flip it locally, then tell the server.
       Array.prototype.forEach.call(panel.querySelectorAll('[data-opt="' + hit.dataset.opt + '"]'), function (n) {
-        n.classList.toggle('seg--on', n === hit);
+        const on = n === hit;
+        n.setAttribute('aria-pressed', on ? 'true' : 'false');
+        n.classList.toggle('seg--on', on && n.classList.contains('seg'));
+        n.classList.toggle('mode--on', on && n.classList.contains('mode'));
       });
       conn.send('set_options', { options: collectOptions() });
+      return;
+    }
+
+    if (hit.dataset.action === 'toggle-more') {
+      moreOpen = !moreOpen;
+      render();
       return;
     }
 

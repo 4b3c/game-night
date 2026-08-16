@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GIF curator</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <style>
+    /* The curator borrows the game's tokens so kept GIFs are judged in the same
+       colours, at roughly the size they'll appear on a card. */
+    body { min-height: 100vh; }
+    .curate {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 18px 18px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .curate__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .curate__title { font-family: var(--gn-font-display); font-size: 1.5rem; }
+    .curate__title small {
+      display: block;
+      font-family: var(--gn-font-body);
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: var(--gn-track-label);
+      color: var(--gn-ink-dim);
+    }
+    .tally { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tally span {
+      padding: 5px 12px;
+      border: var(--gn-outline-sm) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-pill);
+      background: var(--gn-bg-2);
+      font-size: .82rem;
+      font-weight: 800;
+    }
+    .tally b { font-family: var(--gn-font-display); }
+    .tally .kept { background: var(--gn-accent-3); color: var(--gn-accent-3-ink); }
+    .tally .adult { background: var(--gn-accent-2); color: var(--gn-accent-2-ink); }
+    .tally .millennial { background: var(--gn-accent-1); color: var(--gn-accent-1-ink); }
+    .tally .ingame { background: var(--gn-accent-4); color: var(--gn-accent-4-ink); }
+
+    .stage {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 46vh;
+      padding: 14px;
+      border: var(--gn-outline-lg) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius);
+      background: var(--gn-bg-well);
+      box-shadow: var(--gn-shadow-lg);
+      overflow: hidden;
+    }
+    /* Framed exactly like a card in the game, so what you see is what you get. */
+    .card {
+      width: min(100%, 520px);
+      aspect-ratio: 4 / 3;
+      border: var(--gn-outline) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-sm);
+      background: #000;
+      box-shadow: var(--gn-shadow);
+      overflow: hidden;
+    }
+    .card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .caption {
+      margin-top: 10px;
+      text-align: center;
+      color: var(--gn-ink-dim);
+      font-size: .88rem;
+      min-height: 1.2em;
+    }
+    .caption b { color: var(--gn-ink); }
+
+    .verdicts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    @media (min-width: 720px) { .verdicts { grid-template-columns: repeat(4, 1fr); } }
+    .verdicts .btn { width: 100%; flex-direction: column; gap: 2px; padding: 15px 10px; }
+    .verdicts .btn kbd {
+      font-family: var(--gn-font-body);
+      font-size: .68rem;
+      font-weight: 800;
+      opacity: .7;
+      letter-spacing: .06em;
+    }
+    .btn--skip { background: var(--gn-bg-3); color: var(--gn-ink); }
+    .btn--adult { background: var(--gn-accent-2); color: var(--gn-accent-2-ink); }
+    .btn--millennial { background: var(--gn-accent-1); color: var(--gn-accent-1-ink); }
+    .bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.14); overflow: hidden; margin-top: 4px; }
+    .bar i { display: block; height: 100%; background: currentColor; }
+
+    .row { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .hint { color: var(--gn-ink-dim); font-size: .82rem; }
+    .flash {
+      position: fixed;
+      left: 50%;
+      top: 16px;
+      transform: translateX(-50%);
+      padding: 10px 18px;
+      border: var(--gn-outline) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-pill);
+      background: var(--gn-surface);
+      color: var(--gn-surface-ink);
+      font-family: var(--gn-font-display);
+      box-shadow: var(--gn-shadow);
+      opacity: 0;
+      transition: opacity 200ms ease;
+      z-index: 50;
+      pointer-events: none;
+    }
+    .flash--on { opacity: 1; }
+    .flash--bad { background: var(--gn-danger); color: var(--gn-danger-ink); }
+    .problem {
+      padding: 12px 16px;
+      border: var(--gn-outline) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-sm);
+      background: var(--gn-danger);
+      color: var(--gn-danger-ink);
+      font-weight: 800;
+    }
+    .problem:empty { display: none; }
+    .preload { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <main class="curate">
+    <header class="curate__head">
+      <h1 class="curate__title">
+        🃏 GIF curator
+        <small>{{ source }} · rating {{ rating }}</small>
+      </h1>
+      <div class="tally" id="tally"></div>
+    </header>
+
+    <p class="problem" id="problem"></p>
+
+    <section>
+      <div class="stage" id="stage">
+        <div class="card"><img id="gif" alt="candidate GIF"></div>
+      </div>
+      <p class="caption" id="caption"></p>
+    </section>
+
+    <section class="verdicts">
+      <button class="btn btn--skip" data-verdict="skip" type="button">
+        Skip <kbd>← or A</kbd>
+      </button>
+      <button class="btn btn--go" data-verdict="keep" type="button">
+        Normal <kbd>→ or D</kbd>
+      </button>
+      <button class="btn btn--adult" data-verdict="adult" type="button">
+        18+ <kbd>↑ or W</kbd>
+      </button>
+      <button class="btn btn--millennial" data-verdict="millennial" type="button">
+        Millennial <kbd>↓ or S</kbd>
+      </button>
+    </section>
+
+    <div class="row">
+      <button class="btn btn--tiny btn--ghost" data-action="undo" type="button">Undo <kbd>U</kbd></button>
+      <span class="hint">Kept GIFs land in <code>app/static/gifs/</code> and the game's manifest right away.</span>
+      <button class="btn btn--tiny btn--danger" data-action="drop-filler" type="button">Delete the 80 placeholders</button>
+    </div>
+
+    <div id="preload" class="preload"></div>
+  </main>
+
+  <div class="flash" id="flash"></div>
+
+<script>
+(() => {
+  'use strict';
+  const gif = document.getElementById('gif');
+  const caption = document.getElementById('caption');
+  const tally = document.getElementById('tally');
+  const problem = document.getElementById('problem');
+  const flashEl = document.getElementById('flash');
+  const preload = document.getElementById('preload');
+
+  let queue = [];
+  let current = null;
+  let busy = false;
+
+  function flash(text, bad) {
+    flashEl.textContent = text;
+    flashEl.classList.toggle('flash--bad', !!bad);
+    flashEl.classList.add('flash--on');
+    clearTimeout(flash.timer);
+    flash.timer = setTimeout(() => flashEl.classList.remove('flash--on'), 1100);
+  }
+
+  function renderCounts(counts) {
+    if (!counts) return;
+    // A mode needs `target` cards before eight people can play it, so show progress.
+    const bar = (n) => '<span class="bar"><i style="width:' +
+      Math.min(100, Math.round(100 * n / counts.target)) + '%"></i></span>';
+    tally.innerHTML =
+      '<span class="kept">normal <b>' + counts.normal + '</b>/' + counts.target + bar(counts.normal) + '</span>' +
+      '<span class="adult">18+ <b>' + counts.adult + '</b>/' + counts.target + bar(counts.adult) + '</span>' +
+      '<span class="millennial">millennial <b>' + counts.millennial + '</b>/' + counts.target + bar(counts.millennial) + '</span>' +
+      '<span>skipped <b>' + counts.skipped + '</b></span>';
+  }
+
+  async function fill() {
+    const response = await fetch('/api/next?n=5');
+    const data = await response.json();
+    renderCounts(data.counts);
+    problem.textContent = data.error || '';
+    queue = queue.concat(data.candidates || []);
+    // Warm the next few so they appear instantly.
+    preload.innerHTML = queue.slice(0, 4)
+      .map(c => '<img src="' + c.preview + '" alt="">').join('');
+  }
+
+  function show(candidate) {
+    current = candidate;
+    if (!candidate) {
+      gif.removeAttribute('src');
+      caption.innerHTML = '<b>Out of candidates.</b> If there is an error above, fix it and reload; otherwise wait a moment and press any key.';
+      return;
+    }
+    gif.src = candidate.preview;
+    const title = candidate.title || '(untitled)';
+    caption.innerHTML = '<b>' + title.replace(/[<>&]/g, '') + '</b> · found under “' + candidate.query + '”';
+  }
+
+  async function next() {
+    if (queue.length < 3) { try { await fill(); } catch (e) { problem.textContent = String(e); } }
+    show(queue.shift() || null);
+  }
+
+  async function decide(verdict) {
+    if (busy || !current) return;
+    busy = true;
+    const candidate = current;
+    // Move on immediately; the save happens behind us so swiping never stalls.
+    await next();
+    try {
+      const response = await fetch('/api/decide', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({verdict: verdict, candidate: candidate}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'save failed');
+      renderCounts(data.counts);
+      if (verdict === 'keep') flash('Normal 🙂');
+      if (verdict === 'adult') flash('18+ 🌶️');
+      if (verdict === 'millennial') flash('Millennial 📼');
+    } catch (err) {
+      flash(String(err.message || err), true);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function post(path, okText) {
+    const response = await fetch(path, {method: 'POST'});
+    const data = await response.json();
+    if (!response.ok) { flash(data.error || 'failed', true); return; }
+    renderCounts(data.counts);
+    flash(okText.replace('%n', data.removed));
+  }
+
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-verdict], [data-action]');
+    if (!button) return;
+    if (button.dataset.verdict) decide(button.dataset.verdict);
+    else if (button.dataset.action === 'undo') post('/api/undo', 'Undone');
+    else if (button.dataset.action === 'drop-filler') post('/api/drop-filler', 'Deleted %n placeholders');
+  });
+
+  document.addEventListener('keydown', (event) => {
+    const key = event.key.toLowerCase();
+    if (key === 'arrowright' || key === 'd') { event.preventDefault(); decide('keep'); }
+    else if (key === 'arrowleft' || key === 'a') { event.preventDefault(); decide('skip'); }
+    else if (key === 'arrowup' || key === 'w') { event.preventDefault(); decide('adult'); }
+    else if (key === 'arrowdown' || key === 's') { event.preventDefault(); decide('millennial'); }
+    else if (key === 'u') { event.preventDefault(); post('/api/undo', 'Undone'); }
+    else if (!current) next();
+  });
+
+  renderCounts({{ counts | tojson }});
+  next();
+})();
+</script>
+</body>
+</html>

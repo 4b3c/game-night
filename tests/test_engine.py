@@ -234,13 +234,66 @@ def test_two_players_can_never_hold_the_same_gif():
     assert reshuffles > 0, "the deck never recycled, so this test proved less than it should"
 
 
+def test_each_mode_deals_only_its_own_cards(monkeypatch):
+    """Normal, 18+ and Millennial are separate piles — that's the point of the tags."""
+    from app.games.gah import decks
+
+    tagged = (
+        [{"id": f"s{i}", "file": f"s{i}.gif", "label": "s", "rating": "sfw"} for i in range(30)]
+        + [{"id": f"a{i}", "file": f"a{i}.gif", "label": "a", "rating": "adult"} for i in range(30)]
+        + [{"id": f"m{i}", "file": f"m{i}.gif", "label": "m", "rating": "millennial"} for i in range(30)]
+    )
+    monkeypatch.setattr(decks, "load_gifs", lambda: tuple(tagged))
+
+    assert decks.mode_counts() == {"normal": 30, "adult": 30, "millennial": 30}
+
+    for mode, prefix in (("normal", "s"), ("adult", "a"), ("millennial", "m")):
+        game, _ = make_game(4, start=False)
+        game.set_options("p0", {"mode": mode})
+        game.start_game("p0")
+        dealt = [card for player in game.players.values() for card in player.hand]
+        assert dealt, "nothing was dealt"
+        assert all(card.startswith(prefix) for card in dealt), f"{mode} dealt a card from another pile"
+        assert game.public_state()["options"]["mode"] == mode
+
+
+def test_an_unknown_mode_is_refused():
+    game, _ = make_game(4)
+    with pytest.raises(ActionError, match="Unknown game mode"):
+        game.set_options("p0", {"mode": "chaos"})
+
+
+def test_a_mode_without_enough_cards_says_so(monkeypatch):
+    from app.games.gah import decks
+
+    thin = [{"id": f"a{i}", "file": f"a{i}.gif", "label": "a", "rating": "adult"} for i in range(10)]
+    sfw = [{"id": f"s{i}", "file": f"s{i}.gif", "label": "s", "rating": "sfw"} for i in range(60)]
+    monkeypatch.setattr(decks, "load_gifs", lambda: tuple(thin + sfw))
+
+    game, _ = make_game(4)
+    game.set_options("p0", {"mode": "adult"})
+    with pytest.raises(ActionError, match="18\\+ mode only has 10 GIFs"):
+        game.start_game("p0")
+    assert game.phase == Phase.LOBBY
+
+    # The lobby is told which modes are playable, so it can grey the others out.
+    modes = {m["id"]: m for m in game.public_state()["modes"]}
+    assert modes["adult"]["enough"] is False
+    assert modes["normal"]["enough"] is True
+
+    # Switching to a mode that does have the cards just works.
+    game.set_options("p0", {"mode": "normal"})
+    game.start_game("p0")
+    assert game.phase == Phase.ROUND_READY
+
+
 def test_starting_without_enough_gifs_is_refused_before_dealing(monkeypatch):
     """Swapping in your own GIFs shouldn't be able to half-deal a game."""
     game, _ = make_game(8)
     small = tuple(load_gifs()[:20])  # 20 cards, 8 players need 56
     monkeypatch.setattr("app.games.gah.decks.load_gifs", lambda: small)
 
-    with pytest.raises(ActionError, match="Only 20 GIFs installed"):
+    with pytest.raises(ActionError, match="Normal mode only has 20 GIFs"):
         game.start_game("p0")
 
     # Nothing was dealt and the game is still joinable.

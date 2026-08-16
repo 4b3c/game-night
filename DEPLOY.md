@@ -134,18 +134,34 @@ All optional — every one has a working default. See `.env.example`.
 | `GN_ROOM_IDLE_TIMEOUT` | `600` | Seconds a room survives after the last person leaves. |
 | `HOST_PORT` | `5050` | Host port the container publishes on, bound to localhost. |
 
-## Swapping in your own GIFs
+## Getting your curated GIFs onto the server
 
-Without rebuilding the image:
+Curate locally (`python scripts/curate_gifs.py` — see the README), then push. One-time
+setup on the server so the container reads GIFs from disk instead of the copy baked into
+the image:
 
 ```bash
-mkdir -p gifs && cp /wherever/*.gif gifs/          # your files
-docker compose exec app python scripts/scan_gifs.py  # or run it on the host copy
+cat > /opt/game-night/docker-compose.override.yml <<'YAML'
+services:
+  app:
+    volumes:
+      - ./app/static/gifs:/app/app/static/gifs:ro
+YAML
+docker compose up -d
 ```
 
-then uncomment the `volumes:` block in `docker-compose.yml` (pointing at your folder) and
-`docker compose up -d`. Aim for 60+ GIFs so eight hands of seven don't recycle constantly.
-Same idea for prompts: edit `app/data/prompts.json` and redeploy.
+After that, every batch is one command from your laptop:
+
+```bash
+GAH_HOST=root@your-server ./scripts/push_gifs.sh
+```
+
+It rsyncs `app/static/gifs/` (GIFs + manifest) and restarts the container. The override
+file is gitignored, so `git pull` won't fight it. Aim for 56 GIFs per mode — eight players
+hold 56 cards at once, and the lobby greys out modes that aren't there yet.
+
+Prompts travel in git: edit `app/data/prompts.json`, commit, pull, `docker compose up -d
+--build`.
 
 ## Sizing
 

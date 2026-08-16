@@ -37,7 +37,12 @@ def load_prompts() -> tuple[dict, ...]:
 
 @lru_cache(maxsize=1)
 def load_gifs() -> tuple[dict, ...]:
-    """[{id, file, label}] from app/static/gifs/manifest.json."""
+    """[{id, file, label, rating}] from app/static/gifs/manifest.json.
+
+    Entries whose file isn't on disk are skipped: the manifest travels in git while the
+    curated GIFs are rsynced separately, so a partially-synced folder should mean fewer
+    cards, not broken pictures mid-game.
+    """
     if not GIF_MANIFEST_PATH.exists():
         raise DeckError(
             f"{GIF_MANIFEST_PATH} missing -- run `python scripts/make_placeholder_gifs.py`"
@@ -45,13 +50,49 @@ def load_gifs() -> tuple[dict, ...]:
     raw = json.loads(GIF_MANIFEST_PATH.read_text())
     gifs = raw["gifs"] if isinstance(raw, dict) else raw
     out = []
+    missing = 0
     for g in gifs:
         if not g.get("id") or not g.get("file"):
             continue
-        out.append({"id": g["id"], "file": g["file"], "label": g.get("label", g["id"])})
+        if not (GIF_MANIFEST_PATH.parent / g["file"]).is_file():
+            missing += 1
+            continue
+        out.append(
+            {
+                "id": g["id"],
+                "file": g["file"],
+                "label": g.get("label", g["id"]),
+                # "sfw" unless the curator marked it; see scripts/curate_gifs.py
+                "rating": g.get("rating", "sfw"),
+            }
+        )
+    if missing:
+        print(f"[gah] {missing} gif(s) in the manifest are not on disk — skipping them")
     if len(out) < 16:
         raise DeckError(f"only {len(out)} gifs loaded from {GIF_MANIFEST_PATH}")
     return tuple(out)
+
+
+# --- modes ---------------------------------------------------------------------
+# Each mode deals from its own set of cards, tagged by scripts/curate_gifs.py. Adding a
+# fourth mode is one entry here plus one button in the lobby.
+MODES: dict[str, dict] = {
+    "normal": {"label": "Normal", "emoji": "🙂", "ratings": ("sfw",)},
+    "adult": {"label": "18+", "emoji": "🌶️", "ratings": ("adult",)},
+    "millennial": {"label": "Millennial", "emoji": "📼", "ratings": ("millennial",)},
+}
+DEFAULT_MODE = "normal"
+
+
+def gifs_for_mode(mode: str) -> tuple[dict, ...]:
+    """The cards this mode plays with."""
+    wanted = MODES.get(mode, MODES[DEFAULT_MODE])["ratings"]
+    return tuple(g for g in load_gifs() if g.get("rating", "sfw") in wanted)
+
+
+def mode_counts() -> dict[str, int]:
+    """How many cards each mode has — the lobby shows this so you can see what's ready."""
+    return {name: len(gifs_for_mode(name)) for name in MODES}
 
 
 def gif_index() -> dict[str, dict]:
@@ -86,8 +127,8 @@ class Deck:
         self.discard_pile.extend(ids)
 
 
-def build_gif_deck(rng: random.Random) -> Deck:
-    return Deck([g["id"] for g in load_gifs()], rng)
+def build_gif_deck(rng: random.Random, mode: str = DEFAULT_MODE) -> Deck:
+    return Deck([g["id"] for g in gifs_for_mode(mode)], rng)
 
 
 def build_prompt_deck(rng: random.Random) -> Deck:

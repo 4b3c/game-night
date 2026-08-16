@@ -41,8 +41,9 @@ one: `http://192.168.1.42:5050/ABCD/tv`
    winner. That player gets a point; only the winning card's author is revealed.
 5. First to the target score (default 5) wins. The host can start a rematch in the same room.
 
-4–8 players (2 with **test mode**, for playing with bots). The host sets judge rotation
-(circle or last round's winner), points to win, and both timers in the lobby.
+4–8 players (2 with **test mode**, for playing with bots). The host picks a **mode** —
+Normal, 18+ or Millennial, each dealing from its own pile of GIFs — and everything else
+(judge rotation, points to win, timers, test mode) lives behind *More settings*.
 
 ## Routes
 
@@ -77,10 +78,47 @@ and timing as a CSS custom property. Change a value, reload. No build step, no n
 **The prompts** — `app/data/prompts.json`. One object per card: `{"id", "text", "blanks"}`,
 with `___` marking the blank. Add or delete freely; ids only need to be unique.
 
-**The GIFs** — drop your own `.gif` files into `app/static/gifs/` and run
-`python scripts/scan_gifs.py` to rebuild the manifest. Aim for 60+ so eight hands of seven
-don't recycle constantly. `scripts/make_placeholder_gifs.py --count 200 --clean` regenerates
+**The GIFs** — use the curator below, or drop your own `.gif` files into
+`app/static/gifs/` and run `python scripts/scan_gifs.py` to rebuild the manifest (it keeps
+the mode tags of files it already knows). Aim for 56+ per mode so eight hands of seven don't
+recycle constantly. `scripts/make_placeholder_gifs.py --count 200 --clean` regenerates
 filler instead.
+
+## Curating real GIFs
+
+Three modes — **Normal**, **18+** and **Millennial** — each deal from their own pile of
+cards. You fill those piles by swiping:
+
+```bash
+export GIPHY_API_KEY=xxxxxxxx        # developers.giphy.com -> Create an App -> API
+python scripts/curate_gifs.py        # then open http://127.0.0.1:5099
+```
+
+One GIF at a time, framed exactly as it'll appear on a card. `→` keeps it for Normal, `↑`
+for 18+, `↓` for Millennial, `←` skips, `U` undoes. Keeps are downloaded into
+`app/static/gifs/` and tagged in the manifest immediately, so they're in the game the next
+time it starts. Decisions are remembered in `curation/decisions.json` — nothing you've
+judged comes back, and you can stop and resume whenever.
+
+```bash
+python scripts/curate_gifs.py --source tenor              # Tenor instead of Giphy
+python scripts/curate_gifs.py --rating r                  # let the edgier stuff through
+python scripts/curate_gifs.py --queries "facepalm,oops"   # your own search terms
+```
+
+A mode needs **56 cards** before eight people can play it (28 for four); the lobby greys out
+modes that aren't ready and the curator shows a progress bar for each. There's a button to
+delete the 80 placeholders once you've got real ones.
+
+Curated GIFs are gitignored on purpose — they came from someone else's API and this repo is
+public. To get them onto the server:
+
+```bash
+GAH_HOST=root@your-server ./scripts/push_gifs.sh
+```
+
+(One-time on the server: a `docker-compose.override.yml` mounting `./app/static/gifs`, so a
+push doesn't need an image rebuild. See the script's comments and DEPLOY.md.)
 
 **The rules** — the knobs are constants at the top of `app/games/gah/engine.py`: hand size,
 prompt choices, player limits, score range, and the away-grace windows.
@@ -129,7 +167,7 @@ for zero setup.
 ## Tests
 
 ```bash
-pytest                                        # 53 tests, no browser needed
+pytest                                        # 56 tests, no browser needed
 python scripts/simulate_game.py --players 8   # a real full game over real websockets
 ```
 
