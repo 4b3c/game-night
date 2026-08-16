@@ -14,11 +14,13 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
 
+python scripts/scan_gifs.py     # once: builds the GIF manifest from the folder
 python run.py
 ```
 
-(The 80 filler GIFs are committed. `python scripts/make_placeholder_gifs.py` regenerates
-them, and needs the dev requirements for Pillow.)
+(The 80 filler GIFs are committed; the manifest that describes them is generated, since
+the curator rewrites it. `python scripts/make_placeholder_gifs.py` regenerates the filler
+itself and needs the dev requirements for Pillow.)
 
 It prints your LAN address. Everyone in the room opens that on their phone:
 

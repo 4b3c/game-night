@@ -45,7 +45,8 @@ def load_gifs() -> tuple[dict, ...]:
     """
     if not GIF_MANIFEST_PATH.exists():
         raise DeckError(
-            f"{GIF_MANIFEST_PATH} missing -- run `python scripts/make_placeholder_gifs.py`"
+            f"{GIF_MANIFEST_PATH} missing -- run `python scripts/scan_gifs.py` (or "
+            f"`python scripts/make_placeholder_gifs.py` for fresh filler)"
         )
     raw = json.loads(GIF_MANIFEST_PATH.read_text())
     gifs = raw["gifs"] if isinstance(raw, dict) else raw

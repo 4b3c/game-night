@@ -220,3 +220,7 @@ app/static/gifs/*.gif
 # local curation state and per-server compose tweaks
 /curation/
 docker-compose.override.yml
+
+# the GIF manifest is generated (scripts/scan_gifs.py) and rewritten by the curator,
+# so it travels by rsync with the gifs it describes — not through git
+app/static/gifs/manifest.json
