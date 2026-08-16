@@ -167,6 +167,87 @@ def test_submitting_refills_the_hand_immediately():
     assert played not in player.hand
 
 
+def check_no_duplicates(game: Game, total: int, where: str) -> None:
+    """No GIF may ever be in two places at once, and none may go missing.
+
+    The property that matters to players: a card in someone's hand is in nobody else's
+    hand, and isn't simultaneously sitting in the deck waiting to be dealt again.
+    """
+    places = game.card_locations()
+    hands = places["hands"]
+    everywhere = [card for cards in places.values() for card in cards]
+
+    duplicates = {card for card in everywhere if everywhere.count(card) > 1}
+    assert not duplicates, (
+        f"{where}: {sorted(duplicates)} in more than one place — "
+        + ", ".join(f"{k}={len(v)}" for k, v in places.items())
+    )
+    assert len(set(hands)) == len(hands), f"{where}: two players hold the same GIF"
+    for pile in ("draw", "discard"):
+        clash = set(hands) & set(places[pile])
+        assert not clash, f"{where}: {sorted(clash)} is both in a hand and in the {pile} pile"
+    assert len(everywhere) == total, (
+        f"{where}: {len(everywhere)} cards accounted for, expected {total} — "
+        + ", ".join(f"{k}={len(v)}" for k, v in places.items())
+    )
+
+
+def test_two_players_can_never_hold_the_same_gif():
+    """The headline guarantee, checked at every step of a long 8-player game.
+
+    Eight players hold 56 of the 80 cards, so the draw pile empties and the discard is
+    reshuffled several times over a game this long — exactly where a double-deal bug
+    would show up.
+    """
+    total = len(load_gifs())
+    game, _ = make_game(8, start=True, target_score=10, judge_rotation="circle")
+    check_no_duplicates(game, total, "after the deal")
+
+    reshuffles = 0
+    for round_number in range(40):
+        judge = game.judge_pid
+        game.judge_ready(judge)
+        game.pick_prompt(judge, game.prompt_choice_ids[0])
+        check_no_duplicates(game, total, f"round {round_number} prompt chosen")
+
+        for player in submitters(game):
+            before = len(game._gif_deck.draw_pile)
+            game.submit_card(player.pid, player.hand[0])
+            if len(game._gif_deck.draw_pile) > before:
+                reshuffles += 1
+            check_no_duplicates(game, total, f"round {round_number} after {player.nickname} played")
+
+        # Every hand is still full and still has no repeats inside it.
+        for player in submitters(game):
+            assert len(player.hand) == E.HAND_SIZE
+            assert len(set(player.hand)) == E.HAND_SIZE, f"{player.nickname} holds a duplicate"
+
+        for slot in range(len(game.submissions)):
+            game.flip(judge, slot)
+        game.pick_winner(judge, 0)
+        check_no_duplicates(game, total, f"round {round_number} awarded")
+        if game.phase == Phase.GAME_OVER:
+            break
+        game.next_round(judge)
+        check_no_duplicates(game, total, f"round {round_number} ended")
+
+    assert reshuffles > 0, "the deck never recycled, so this test proved less than it should"
+
+
+def test_starting_without_enough_gifs_is_refused_before_dealing(monkeypatch):
+    """Swapping in your own GIFs shouldn't be able to half-deal a game."""
+    game, _ = make_game(8)
+    small = tuple(load_gifs()[:20])  # 20 cards, 8 players need 56
+    monkeypatch.setattr("app.games.gah.decks.load_gifs", lambda: small)
+
+    with pytest.raises(ActionError, match="Only 20 GIFs installed"):
+        game.start_game("p0")
+
+    # Nothing was dealt and the game is still joinable.
+    assert game.phase == Phase.LOBBY
+    assert all(p.hand == [] for p in game.players.values())
+
+
 def test_deck_recycles_its_discard_pile():
     deck = build_gif_deck(random.Random(1))
     drawn = [deck.draw() for _ in range(len(load_gifs()))]
@@ -511,6 +592,71 @@ def test_only_the_winning_card_gets_an_author():
     assert len(authored) == 1
     assert authored[0]["slot"] == 1
     assert authored[0]["author"]["pid"] == game.round_winner_pid
+
+
+def test_you_learn_which_card_is_yours_and_nobody_elses():
+    """Each player's own view marks their own answer, and only their own."""
+    game, _ = make_game(4, start=True)
+    judge = game.judge_pid
+    game.judge_ready(judge)
+    game.pick_prompt(judge, game.prompt_choice_ids[0])
+    played = {}
+    for player in submitters(game):
+        played[player.pid] = player.hand[0]
+        game.submit_card(player.pid, played[player.pid])
+
+    # During the reveal, each player is told their slot — and it's the right one.
+    for pid, gif_id in played.items():
+        slot = game.view_for(pid)["you"]["slot"]
+        assert slot is not None, "a player wasn't told which card was theirs"
+        assert game.submissions[slot].pid == pid
+        assert game.submissions[slot].gif_id == gif_id
+
+    # Everybody's slot is different, and nothing about it reaches the room or the TV.
+    slots = [game.view_for(pid)["you"]["slot"] for pid in played]
+    assert len(set(slots)) == len(slots)
+    assert game.view_for(judge)["you"]["slot"] is None  # the judge played nothing
+    assert "slot" not in game.view_for_tv()
+    assert "slot" not in game.public_state()
+    for card in game.view_for_tv()["cards"]:
+        assert "pid" not in card and "author" not in card
+
+
+def test_no_slot_is_revealed_before_the_reveal():
+    game, _ = make_game(4, start=True)
+    judge = game.judge_pid
+    game.judge_ready(judge)
+    game.pick_prompt(judge, game.prompt_choice_ids[0])
+    player = submitters(game)[0]
+    game.submit_card(player.pid, player.hand[0])
+    # Still SUBMIT: slots aren't shuffled yet, so an index would leak play order.
+    assert game.view_for(player.pid)["you"]["slot"] is None
+
+
+def test_every_round_deals_a_fresh_table():
+    """Each round's cards are new objects with their own gifs.
+
+    A client that keyed its card elements only by *count* showed the previous round's
+    GIFs when two rounds in a row had the same number of answers. The engine side of
+    that guarantee: consecutive rounds hand out different gif ids in each slot.
+    """
+    game, _ = make_game(4, start=True, target_score=10)
+    seen = []
+    for _ in range(3):
+        judge = game.judge_pid
+        game.judge_ready(judge)
+        game.pick_prompt(judge, game.prompt_choice_ids[0])
+        for player in submitters(game):
+            game.submit_card(player.pid, player.hand[0])
+        for slot in range(len(game.submissions)):
+            game.flip(judge, slot)
+        seen.append([c["gif"]["id"] for c in game.public_state()["cards"]])
+        game.pick_winner(judge, 0)
+        game.next_round(judge)
+
+    flat = [gif for round_cards in seen for gif in round_cards]
+    assert len(flat) == len(set(flat)), "a gif was played in two different rounds"
+    assert seen[0] != seen[1] != seen[2]
 
 
 def test_public_state_never_contains_a_hand():

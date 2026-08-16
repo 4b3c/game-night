@@ -52,8 +52,8 @@ def main() -> int:
     lan = args.base
     print()
     print(f"  🃏  Game code:  {code}")
-    print(f"      Play:  {lan}/gah/{code}")
-    print(f"      TV:    {lan}/gah/{code}/tv")
+    print(f"      Play:  {lan}/{code}")
+    print(f"      TV:    {lan}/{code}/tv")
     print(f"      {args.bots} bot(s) waiting — the game starts when {start_at} players are in.")
     print()
 

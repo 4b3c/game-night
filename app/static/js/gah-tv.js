@@ -38,6 +38,9 @@
     },
     onState: function (next) {
       state = next;
+      // Debug aid, mirroring the phone client: inspect `__tvState` in devtools. This is
+      // the spectator view, so it has no hands and no unrevealed cards in it.
+      window.__tvState = next;
       render();
     },
     onGone: function () {
@@ -169,7 +172,9 @@
     }
 
     const cards = state.cards || [];
-    const key = 'table:' + cards.length;
+    // Keyed by round as well as count: two rounds with the same number of answers would
+    // otherwise reuse last round's card elements, and their pictures with them.
+    const key = 'table:' + state.round + ':' + cards.length;
     if (cardsKey !== key) {
       cardsEl.innerHTML = cards
         .map(function (c) {
@@ -194,13 +199,22 @@
       node.classList.toggle('tvcard--up', !!c.revealed);
       node.classList.toggle('tvcard--winner', !!c.is_winner);
       node.classList.toggle('tvcard--dimmed', state.round_winner_slot !== null && !c.is_winner);
+      // Always make the picture match the payload, whatever was there before.
       const front = node.querySelector('.tvcard__front');
-      if (c.revealed && c.gif && !front.querySelector('img')) {
-        const img = document.createElement('img');
-        img.className = 'tvcard__img';
-        img.src = gifUrl(c.gif);
-        img.alt = '';
-        front.appendChild(img);
+      let img = front.querySelector('img');
+      if (c.revealed && c.gif) {
+        if (!img) {
+          img = document.createElement('img');
+          img.className = 'tvcard__img';
+          img.alt = '';
+          front.appendChild(img);
+        }
+        if (img.dataset.gif !== c.gif.id) {
+          img.dataset.gif = c.gif.id;
+          img.src = gifUrl(c.gif);
+        }
+      } else if (img) {
+        img.remove();
       }
       const author = node.querySelector('.tvcard__author');
       author.innerHTML = c.author ? avatarHtml(c.author) + '<b>' + esc(c.author.nickname) + '</b>' : '';

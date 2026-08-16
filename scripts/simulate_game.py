@@ -47,10 +47,10 @@ class Bot:
 
     # -- http ---------------------------------------------------------------
     def create_game(self) -> str:
-        """POST /gah/new and read the code out of the redirect."""
-        request = urllib.request.Request(f"{self.base}/gah/new", data=b"", method="POST")
+        """POST /new and read the code out of the redirect."""
+        request = urllib.request.Request(f"{self.base}/new", data=b"", method="POST")
         with self.http.open(request) as response:
-            match = re.search(r"/gah/([A-Z]{4})", response.geturl())
+            match = re.search(r"/([A-Z]{4})", response.geturl())
             if not match:
                 raise RuntimeError(f"could not find a game code in {response.geturl()}")
             self.code = match.group(1)
@@ -58,7 +58,7 @@ class Bot:
 
     def load_page(self) -> None:
         """Fetch the play page so the session cookie exists before the socket opens."""
-        with self.http.open(f"{self.base}/gah/{self.code}") as response:
+        with self.http.open(f"{self.base}/{self.code}") as response:
             response.read()
 
     def cookie_header(self) -> str:

@@ -237,7 +237,11 @@
       return;
     }
     table.hidden = false;
-    const key = cards.length + '|' + mode;
+    // The round has to be part of the key. Two rounds in a row with the same number of
+    // answers would otherwise reuse the previous round's card elements — and since the
+    // <img> is only created when one isn't already there, every phone would keep showing
+    // last round's GIFs.
+    const key = state.round + '|' + cards.length + '|' + mode;
     if (tableKey !== key) {
       table.innerHTML = cards
         .map(function (c) {
@@ -250,6 +254,7 @@
                 '<span class="tcard__back"><span class="tcard__mark">GIF</span></span>' +
                 '<span class="tcard__front"></span>' +
               '</span>' +
+              '<span class="tcard__mine" aria-hidden="true">Yours</span>' +
               '<span class="tcard__caption"></span>' +
             '</' + tag + '>'
           );
@@ -266,13 +271,25 @@
       node.classList.toggle('tcard--up', !!c.revealed);
       node.classList.toggle('tcard--winner', !!c.is_winner);
       node.classList.toggle('tcard--loser', state.round_winner_slot !== null && !c.is_winner);
+      // Your own answer, marked so you can follow the reveal. Server only tells you
+      // about yours.
+      node.classList.toggle('tcard--mine', me() !== null && me().slot === c.slot);
+      // Always make the picture match the payload, whatever was there before.
       const front = node.querySelector('.tcard__front');
-      if (c.revealed && c.gif && !front.querySelector('img')) {
-        const img = document.createElement('img');
-        img.className = 'tcard__img';
-        img.src = gifUrl(c.gif);
-        img.alt = 'Submitted GIF';
-        front.appendChild(img);
+      let img = front.querySelector('img');
+      if (c.revealed && c.gif) {
+        if (!img) {
+          img = document.createElement('img');
+          img.className = 'tcard__img';
+          img.alt = 'Submitted GIF';
+          front.appendChild(img);
+        }
+        if (img.dataset.gif !== c.gif.id) {
+          img.dataset.gif = c.gif.id;
+          img.src = gifUrl(c.gif);
+        }
+      } else if (img) {
+        img.remove(); // face down again — never leave a stale picture behind the back
       }
       const caption = node.querySelector('.tcard__caption');
       caption.innerHTML = c.author
@@ -282,23 +299,50 @@
   }
 
   // --- the hand --------------------------------------------------------------
+  function buildCardNode(card) {
+    const node = document.createElement('button');
+    node.className = 'gifcard';
+    node.type = 'button';
+    node.dataset.gif = card.id;
+    node.innerHTML =
+      '<img class="gifcard__img" src="' + gifUrl(card) + '" alt="' + esc(card.label) + '" loading="lazy">' +
+      '<span class="gifcard__tick" aria-hidden="true">✔</span>' +
+      '<span class="gifcard__new" aria-hidden="true">New</span>';
+    return node;
+  }
+
+  /**
+   * Reconcile the hand card by card rather than rebuilding it.
+   *
+   * Two reasons. Rebuilding restarts every GIF in the hand, which looks like a glitch.
+   * And keeping the nodes that stay means the one card that *is* new can announce
+   * itself: the replacement you draw after playing deals itself in.
+   */
   function syncHand(enabled) {
     const you = me();
     const cards = (you && you.hand) || [];
-    const key = cards.map(function (c) { return c.id; }).join(',');
-    if (handEl.dataset.key !== key) {
-      handEl.innerHTML = cards
-        .map(function (c) {
-          return (
-            '<button class="gifcard" data-gif="' + esc(c.id) + '" type="button">' +
-              '<img class="gifcard__img" src="' + gifUrl(c) + '" alt="' + esc(c.label) + '" loading="lazy">' +
-              '<span class="gifcard__tick" aria-hidden="true">✔</span>' +
-            '</button>'
-          );
-        })
-        .join('');
-      handEl.dataset.key = key;
-    }
+    const wanted = cards.map(function (c) { return c.id; });
+    const firstFill = handEl.dataset.filled !== 'yes';
+
+    // Cards that left the hand (you played them).
+    Array.prototype.slice.call(handEl.children).forEach(function (node) {
+      if (wanted.indexOf(node.dataset.gif) === -1) node.remove();
+    });
+
+    // Cards that arrived, in hand order.
+    cards.forEach(function (card, index) {
+      let node = handEl.querySelector('.gifcard[data-gif="' + card.id + '"]');
+      if (!node) {
+        node = buildCardNode(card);
+        // Only a card drawn mid-game gets the animation — not the opening seven.
+        if (!firstFill) node.classList.add('gifcard--dealt');
+      }
+      if (handEl.children[index] !== node) {
+        handEl.insertBefore(node, handEl.children[index] || null);
+      }
+    });
+    handEl.dataset.filled = 'yes';
+
     Array.prototype.forEach.call(handEl.querySelectorAll('.gifcard'), function (node) {
       node.classList.toggle('gifcard--selected', node.dataset.gif === selected);
       node.disabled = !enabled;
@@ -316,7 +360,7 @@
     handarea.hidden = false;
     handTitle.textContent = mode === 'play' ? 'Pick your answer' : 'Your GIFs';
     syncHand(mode === 'play');
-    const bar = handarea.querySelector('.confirmbar');
+    let bar = handarea.querySelector('.confirmbar');
     if (mode === 'play' && selected) {
       if (!bar) {
         const node = document.createElement('div');
@@ -328,7 +372,10 @@
       }
     } else if (bar) {
       bar.remove();
+      bar = null;
     }
+    // The bar is fixed to the bottom of the screen, so leave room for it.
+    handarea.classList.toggle('handarea--choosing', !!handarea.querySelector('.confirmbar'));
   }
 
   // --- panels ----------------------------------------------------------------
@@ -709,7 +756,9 @@
       case 'SUBMIT':
         setPanel(submitPanel());
         table.hidden = true;
-        showHand(!you.is_judge && !you.submitted_gif ? 'play' : null);
+        // After you've played, keep the hand on screen in look-don't-touch mode: that's
+        // when the replacement card deals itself in, and it's worth seeing.
+        showHand(you.is_judge ? null : (you.submitted_gif ? 'peek' : 'play'));
         break;
 
       case 'REVEAL':

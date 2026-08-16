@@ -201,7 +201,7 @@ b, strong { font-weight: 900; }
 .nickinput::placeholder { color: #c9bda2; }
 
 /* --- page shells --------------------------------------------------------- */
-.home, .landing {
+.landing {
   width: 100%;
   max-width: var(--gn-max-width);
   margin: 0 auto;
@@ -238,8 +238,8 @@ b, strong { font-weight: 900; }
   flex-direction: column;
   align-items: center;
   gap: 0;
-  font-size: clamp(3.1rem, 18vw, 6rem);
-  line-height: .9;
+  font-size: clamp(2.2rem, 13.5vw, 4.8rem);
+  line-height: .92;
   text-transform: uppercase;
 }
 .hero__word {
@@ -251,6 +251,7 @@ b, strong { font-weight: 900; }
 }
 .hero__word--1 { color: var(--gn-accent-4); transform: rotate(-3deg); }
 .hero__word--2 { color: var(--gn-accent-2); transform: rotate(2deg) translateY(-.04em); }
+.hero__word--3 { color: var(--gn-accent-1); transform: rotate(-1.5deg); }
 .hero__tagline {
   margin-top: 20px;
   color: var(--gn-ink);
@@ -318,169 +319,38 @@ b, strong { font-weight: 900; }
   letter-spacing: var(--gn-track-label);
 }
 
-/* --- game tiles ---------------------------------------------------------- */
-.games__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 20px;
-}
-.gamecard { display: flex; }
-.gamecard__link {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  padding: 20px 18px 18px;
-  border: var(--gn-outline-lg) solid var(--gn-outline-color);
-  border-radius: var(--gn-radius);
-  background: var(--gn-surface);
-  color: var(--gn-surface-ink);
-  box-shadow: var(--gn-shadow-lg);
-  overflow: hidden;
-  transition:
-    transform var(--gn-pop-ms) var(--gn-ease),
-    box-shadow var(--gn-pop-ms) var(--gn-ease);
-}
-/* colour band along the top of the tile */
-.gamecard__link::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 12px;
-  background: var(--gn-accent-1);
-  border-bottom: var(--gn-outline) solid var(--gn-outline-color);
-}
-.gamecard:nth-child(2) .gamecard__link::before { background: var(--gn-accent-2); }
-.gamecard:nth-child(3) .gamecard__link::before { background: var(--gn-accent-3); }
-.gamecard:nth-child(1) { transform: rotate(var(--gn-tilt-c)); }
-.gamecard:nth-child(3) { transform: rotate(var(--gn-tilt-b)); }
-a.gamecard__link:hover {
-  transform: translate(-2px, -4px) rotate(-.8deg);
-  box-shadow: var(--gn-shadow-xl);
-}
-.gamecard__emoji {
-  display: grid;
-  place-items: center;
-  width: 62px;
-  height: 62px;
-  margin-top: 6px;
-  border: var(--gn-outline) solid var(--gn-outline-color);
-  border-radius: var(--gn-radius-sm);
-  background: var(--gn-surface-2);
-  box-shadow: var(--gn-shadow-press);
-  font-size: 2.1rem;
-  line-height: 1;
-  transform: rotate(-4deg);
-}
-.gamecard__name { font-size: 1.35rem; }
-.gamecard__tagline { font-size: .95rem; font-weight: 700; color: var(--gn-surface-dim); }
-.gamecard__players {
-  font-size: .75rem;
-  text-transform: uppercase;
-  letter-spacing: var(--gn-track-label);
-  color: var(--gn-surface-dim);
-}
-.gamecard__cta {
-  margin-top: 12px;
-  align-self: flex-start;
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-  padding: 9px 18px;
-  border-radius: var(--gn-radius-pill);
-  background: var(--gn-accent-1);
-  color: var(--gn-accent-1-ink);
-  font-family: var(--gn-font-display);
-  font-size: 1rem;
-  border: var(--gn-outline) solid var(--gn-outline-color);
-  box-shadow: var(--gn-shadow-press);
-}
-.gamecard--soon .gamecard__link {
-  background: var(--gn-bg-2);
-  color: var(--gn-ink-dim);
-  box-shadow: var(--gn-shadow-press);
-  border-style: dashed;
-}
-.gamecard--soon .gamecard__link::before { opacity: .5; border-bottom-style: dashed; }
-.gamecard--soon .gamecard__name { color: var(--gn-ink); }
-.gamecard--soon .gamecard__tagline,
-.gamecard--soon .gamecard__players { color: var(--gn-ink-dim); }
-.gamecard--soon .gamecard__emoji {
-  background: var(--gn-bg-3);
-  border-style: dashed;
-  box-shadow: none;
-  filter: grayscale(.6);
-  opacity: .8;
-}
-.gamecard--soon .gamecard__cta {
-  background: transparent;
-  color: var(--gn-ink-dim);
-  border-style: dashed;
-  box-shadow: none;
-}
-
-.home__footer {
+.landing__footer {
   text-align: center;
   color: var(--gn-ink-dim);
   font-size: .9rem;
   line-height: 1.5;
 }
 
-/* --- landing ------------------------------------------------------------- */
-.landing__head { text-align: center; }
-.landing__emoji {
-  display: inline-grid;
-  place-items: center;
-  width: 84px;
-  height: 84px;
-  margin-bottom: 14px;
-  border: var(--gn-outline-lg) solid var(--gn-outline-color);
-  border-radius: var(--gn-radius);
-  background: var(--gn-surface);
-  box-shadow: var(--gn-shadow);
-  font-size: 2.8rem;
-  transform: rotate(-5deg);
+/* --- landing: create-a-game box ------------------------------------------ */
+.startbox {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  text-align: center;
 }
-.landing__title {
-  font-size: clamp(2.1rem, 10vw, 3.2rem);
-  color: var(--gn-accent-4);
-  text-transform: uppercase;
-  line-height: .95;
-  -webkit-text-stroke: 4px var(--gn-outline-color);
-  paint-order: stroke fill;
-  text-shadow: 5px 5px 0 var(--gn-outline-color);
-}
-.landing__tagline { margin-top: 16px; color: var(--gn-ink); font-size: 1.05rem; }
-.landing__meta {
-  display: inline-block;
-  margin-top: 12px;
-  padding: 6px 14px;
-  border: var(--gn-outline-sm) solid var(--gn-outline-color);
-  border-radius: var(--gn-radius-pill);
-  background: var(--gn-bg-2);
-  color: var(--gn-ink-dim);
-  font-size: .82rem;
-  text-transform: uppercase;
-  letter-spacing: var(--gn-track-label);
-}
-.landing__actions { display: flex; flex-direction: column; gap: 16px; }
-.landing__or {
+.startbox__or {
   display: flex;
   align-items: center;
   gap: 12px;
   color: var(--gn-ink-dim);
-  font-size: .8rem;
+  font-size: .85rem;
   text-transform: uppercase;
   letter-spacing: var(--gn-track-label);
 }
-.landing__or::before, .landing__or::after {
+.startbox__or::before, .startbox__or::after {
   content: '';
   flex: 1 1 auto;
   height: var(--gn-outline-sm);
   background: rgba(255, 255, 255, .22);
   border-radius: 2px;
 }
+.startbox__note { color: var(--gn-ink-dim); font-size: .85rem; }
 
 .howto {
   border: var(--gn-outline) dashed rgba(255, 255, 255, .3);

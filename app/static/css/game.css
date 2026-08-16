@@ -1,6 +1,6 @@
 /* ===========================================================================
    GAME NIGHT — the phone screen for Gifs Against Humanity
-   Phone-first: one column, thumb-reachable controls, hand pinned to the bottom.
+   Phone-first: one column, thumb-reachable controls, a vertical deck you scroll.
    Every value comes from theme.css.
    =========================================================================== */
 
@@ -453,6 +453,36 @@ button.tcard:active { transform: scale(.98); }
 .tcard__caption .avatar { width: 22px; height: 22px; font-size: .7rem; border-width: var(--gn-outline-sm); }
 @keyframes pop-in { from { transform: translateX(-50%) scale(.6); opacity: 0; } }
 
+/* Your own answer on the table, so you can follow the reveal and know which one to
+   be nervous about. The server only ever tells you about yours. */
+.tcard--mine .tcard__back,
+.tcard--mine .tcard__front { box-shadow: 0 0 0 4px var(--gn-accent-2), var(--gn-shadow); }
+.tcard__mine {
+  position: absolute;
+  top: -9px;
+  left: -6px;
+  z-index: 4;
+  padding: 2px 9px;
+  border: var(--gn-outline-sm) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius-pill);
+  background: var(--gn-accent-2);
+  color: var(--gn-accent-2-ink);
+  font-family: var(--gn-font-display);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: var(--gn-track-label);
+  text-transform: uppercase;
+  transform: rotate(-8deg);
+  opacity: 0;
+  transition: opacity var(--gn-pop-ms) var(--gn-ease);
+  pointer-events: none;
+}
+.tcard--mine .tcard__mine { opacity: 1; }
+/* the winner ring wins the argument if your card took the round */
+.tcard--mine.tcard--winner .tcard__front {
+  box-shadow: 0 0 0 5px var(--gn-accent-4), var(--gn-shadow-lg);
+}
+
 .tcard--winner { z-index: 4; animation: winner-pop var(--gn-slow-ms) var(--gn-ease); }
 .tcard--winner .tcard__front {
   box-shadow: 0 0 0 5px var(--gn-accent-4), var(--gn-shadow-lg);
@@ -648,9 +678,10 @@ button.tcard:active { transform: scale(.98); }
 
 /* --- the hand: cards you're holding -------------------------------------- */
 .handarea {
-  position: sticky;
-  bottom: 0;
-  z-index: 25;
+  /* A vertical deck you scroll through, rather than a filmstrip pinned to the bottom:
+     big cards, one decision per screenful, thumb-friendly. The page scrolls; the
+     confirm bar is what stays pinned (see .confirmbar). */
+  position: relative;
   flex: 0 0 auto;
   padding: 8px 0 calc(10px + env(safe-area-inset-bottom));
   background:
@@ -676,22 +707,17 @@ button.tcard:active { transform: scale(.98); }
 }
 .hand {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: var(--gn-hand-card);
-  gap: 12px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
+  grid-template-columns: 1fr;
+  gap: 14px;
   /* room for the tilt, the lift and the hard shadows */
   padding: 11px max(16px, env(safe-area-inset-left)) 13px max(16px, env(safe-area-inset-right));
-  scrollbar-width: none;
-  overscroll-behavior-x: contain;
 }
-.hand::-webkit-scrollbar { display: none; }
 .hand--locked { opacity: .8; }
+/* room for the fixed confirm bar while a card is selected */
+.handarea--choosing { padding-bottom: 108px; }
 
 .gifcard {
   position: relative;
-  scroll-snap-align: center;
   aspect-ratio: 4 / 3;
   padding: 0;
   overflow: hidden;
@@ -733,19 +759,78 @@ button.tcard:active { transform: scale(.98); }
 .gifcard:disabled { cursor: default; }
 
 .confirmbar {
+  /* Fixed, not sticky: the deck is taller than the screen, and a sticky bar can never be
+     lifted above its own container's top edge — which is itself below the fold once you
+     start scrolling the deck. Fixed means the card you picked is always one tap from
+     being played, wherever you are in the list. */
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
   display: flex;
   gap: 10px;
   align-items: center;
-  margin: 4px max(16px, env(safe-area-inset-left)) 0 max(16px, env(safe-area-inset-right));
-  animation: bar-up var(--gn-pop-ms) var(--gn-ease-bounce);
+  margin-top: 14px;
+  padding: 12px max(16px, env(safe-area-inset-left)) calc(12px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-right));
+  background: linear-gradient(to top, var(--gn-bg-well) 62%, transparent);
+  border-top: var(--gn-outline) solid var(--gn-outline-color);
+  animation: confirm-rise var(--gn-pop-ms) var(--gn-ease);
 }
 .confirmbar .btn--big { flex: 1 1 auto; }
 .confirmbar .btn--ghost { flex: 0 0 auto; }
+@keyframes confirm-rise {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+
+/* --- a freshly drawn card deals itself in -------------------------------- */
+@keyframes deal-in {
+  0%   { transform: translateY(70px) scale(.82) rotate(-7deg); opacity: 0; }
+  55%  { transform: translateY(-8px) scale(1.05) rotate(1.5deg); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+.gifcard--dealt { animation: deal-in 620ms var(--gn-ease) both; z-index: 2; }
+.gifcard--dealt::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 4px var(--gn-accent-3);
+  animation: dealt-glow 1.8s ease forwards;
+  pointer-events: none;
+}
+@keyframes dealt-glow {
+  0%, 45% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.gifcard__new {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 9px;
+  border: var(--gn-outline-sm) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius-pill);
+  background: var(--gn-accent-3);
+  color: var(--gn-accent-3-ink);
+  font-family: var(--gn-font-display);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: var(--gn-track-label);
+  opacity: 0;
+  pointer-events: none;
+}
+.gifcard--dealt .gifcard__new { animation: new-badge 2.2s ease forwards; }
+@keyframes new-badge {
+  0% { opacity: 0; transform: scale(.6) rotate(-10deg); }
+  18%, 55% { opacity: 1; transform: scale(1) rotate(-6deg); }
+  100% { opacity: 0; transform: scale(.8) rotate(-6deg); }
+}
 @keyframes bar-up { from { transform: translateY(18px); opacity: 0; } }
 
 /* --- bigger screens: give the hand more room --------------------------- */
 @media (min-width: 620px) {
-  .hand { grid-auto-columns: 27%; }
+  .hand { grid-template-columns: repeat(2, 1fr); }
   .table { grid-template-columns: repeat(3, 1fr); }
   .panel { padding: 30px 26px 26px; }
   .panel__title { font-size: 2rem; }

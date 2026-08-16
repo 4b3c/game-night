@@ -1,4 +1,4 @@
-# Deploying Game Night on a VPS
+# Deploying Gifs Against Humanity on a VPS
 
 One container, published on `127.0.0.1:5050`. Your existing reverse proxy terminates TLS
 and forwards to it. Nothing is exposed to the internet directly.

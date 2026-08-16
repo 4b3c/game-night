@@ -1,10 +1,11 @@
-# 🎲 Game Night
+# 🃏 Gifs Against Humanity
 
-A free online party-game platform. Everyone plays on their own phone; an optional TV in the
-room is the shared stage. No accounts, no downloads, no database — open the site, type a
-4-letter code, pick a nickname.
+Cards Against Humanity where the answers are GIFs. Everyone plays on their own phone; an
+optional TV in the room is the shared stage. No accounts, no downloads, no database — open
+the site, type a 4-letter code, pick a nickname.
 
-First game: **Gifs Against Humanity** — Cards Against Humanity where the answers are GIFs.
+Live at **[gifs-against-humanity.com](https://gifs-against-humanity.com)**. (The repo and
+the folder are still called `game-night` — that was the original working title.)
 
 ## Quick start
 
@@ -22,11 +23,12 @@ them, and needs the dev requirements for Pillow.)
 It prints your LAN address. Everyone in the room opens that on their phone:
 
 ```
-  🎲 Game Night — phones on your wifi: http://192.168.1.42:5050
+  🃏 Gifs Against Humanity
+      phones on the wifi: http://192.168.1.42:5050
 ```
 
 Create a game, read out the 4-letter code, and put the TV view up on a screen if you have
-one: `http://192.168.1.42:5050/gah/ABCD/tv`
+one: `http://192.168.1.42:5050/ABCD/tv`
 
 ## How a round works
 
@@ -46,10 +48,13 @@ one: `http://192.168.1.42:5050/gah/ABCD/tv`
 
 | Route | What it is |
 |---|---|
-| `/` | Home: join box + game tiles |
-| `/gah/` | Gifs Against Humanity: create a game, how it works |
-| `/gah/<CODE>` | The phone — join, lobby, play |
-| `/gah/<CODE>/tv` | The TV / spectator stage (read-only, never shows who played what) |
+| `/` | The landing page: join a code, or create a game |
+| `/<CODE>` | The phone — join, lobby, play |
+| `/<CODE>/tv` | The TV / spectator stage (read-only, never shows who played what) |
+| `/healthz` | Room and player counts, for monitoring |
+
+`/<CODE>` only matches four letters (a URL converter enforces it), so it can't swallow
+`/healthz` or `/static`. The old `/gah/...` URLs redirect permanently to the new ones.
 
 While a TV is connected, phones collapse to "watch the TV" during the watch-only phases and
 keep only your hand and the judge's controls. Unplug the TV and the phones fill back in.
@@ -87,9 +92,8 @@ runs on Python 3.13+). Vanilla JS on the client, no framework, no bundler.
 
 ```
 app/
-  routes.py                 home + code lookup
+  routes.py                 health + redirects from the old /gah/ URLs
   identity.py               the session cookie (a random id, nothing else)
-  games/registry.py         the game list — add game #2 here
   games/gah/
     engine.py               PURE game state machine: phases, rules, redacted views
     decks.py                prompt + GIF decks (draw, discard, recycle)
@@ -125,7 +129,7 @@ for zero setup.
 ## Tests
 
 ```bash
-pytest                                        # 48 tests, no browser needed
+pytest                                        # 53 tests, no browser needed
 python scripts/simulate_game.py --players 8   # a real full game over real websockets
 ```
 
@@ -155,12 +159,13 @@ Inside the image it's `gunicorn` with a single gevent websocket worker on Python
 One worker is deliberate: rooms live in that process's memory, so a second one would hand
 two players with the same code two different games.
 
-## Adding the second game
+## If you ever add a second game
 
-1. `app/games/<slug>/` with the same split: a pure engine, a room store, Socket.IO events.
-2. Append a `GameInfo` to `app/games/registry.py` and register its code resolver so the home
-   page's join box can route a bare code to it.
-3. Templates in `app/templates/<slug>/`, styles reusing the tokens in `theme.css`.
+The game still lives in its own package (`app/games/gah/`, its own blueprint, engine and
+templates), so a second one would be a sibling package with the same split: a pure engine,
+a room store, Socket.IO events. You'd give it a URL prefix of its own and put a small
+chooser back at `/` — this site deliberately hands the root to Gifs Against Humanity
+instead.
 
 ## Notes
 

@@ -1,49 +1,91 @@
 {% extends "base.html" %}
 {% block body_class %}page-landing{% endblock %}
+{% block chrome %}{% endblock %}
 
 {% block content %}
 <main class="landing">
-  <header class="landing__head">
-    <span class="landing__emoji" aria-hidden="true">{{ game.emoji }}</span>
-    <h1 class="landing__title">Gifs Against Humanity</h1>
-    <p class="landing__tagline">{{ game.tagline }}</p>
-    <p class="landing__meta">{{ game.players }} · first to 5 points wins</p>
+
+  <header class="hero">
+    <h1 class="hero__title">
+      <span class="hero__word hero__word--1">GIFS</span>
+      <span class="hero__word hero__word--2">AGAINST</span>
+      <span class="hero__word hero__word--3">HUMANITY</span>
+    </h1>
+    <p class="hero__tagline">{{ game.tagline }}</p>
+    <ul class="hero__badges" aria-hidden="true">
+      <li class="hero__badge">No app</li>
+      <li class="hero__badge">No accounts</li>
+      <li class="hero__badge">{{ game.players }}</li>
+    </ul>
   </header>
 
-  <div class="landing__actions">
+  <section class="joinbox" aria-labelledby="joinbox-title">
+    <h2 class="joinbox__title" id="joinbox-title">
+      <span aria-hidden="true">🎟️</span> Got a code?
+    </h2>
+    <form class="joinbox__form" method="post" action="{{ url_for('gah.join') }}" autocomplete="off">
+      <input
+        class="codeinput {% if error %}codeinput--error{% endif %}"
+        type="text"
+        name="code"
+        id="code"
+        value="{{ code }}"
+        placeholder="ABCD"
+        maxlength="4"
+        minlength="4"
+        pattern="[A-Za-z]{4}"
+        inputmode="latin"
+        autocapitalize="characters"
+        spellcheck="false"
+        aria-label="4-letter game code"
+        required>
+      <button class="btn btn--go" type="submit">Join</button>
+    </form>
+    {% if error == 'no-room' %}
+      <p class="joinbox__error" role="alert">No game with that code. Maybe it ended?</p>
+    {% elif error == 'bad-code' %}
+      <p class="joinbox__error" role="alert">Codes are 4 letters, like <b>WXYZ</b>.</p>
+    {% else %}
+      <p class="joinbox__hint">Whoever started the game has it</p>
+    {% endif %}
+  </section>
+
+  <section class="startbox">
+    <p class="startbox__or">or start one</p>
     <form method="post" action="{{ url_for('gah.new_game') }}">
       <button class="btn btn--big btn--go" type="submit">🎬 Create a game</button>
     </form>
-    <p class="landing__or">or join one</p>
-    <form class="joinbox__form" method="post" action="{{ url_for('main.join') }}" autocomplete="off">
-      <input class="codeinput" type="text" name="code" id="code" placeholder="ABCD"
-             maxlength="4" minlength="4" pattern="[A-Za-z]{4}" autocapitalize="characters"
-             spellcheck="false" aria-label="4-letter game code" required>
-      <button class="btn" type="submit">Join</button>
-    </form>
-  </div>
+    <p class="startbox__note">You'll get a code to read out to everyone.</p>
+  </section>
 
   <section class="howto">
     <h2 class="howto__title sectiontitle">How it works</h2>
     <ol class="howto__steps">
-      <li><b>Create a game</b> and read out the 4-letter code. Everyone opens the site and types it in.</li>
-      <li><b>Put a TV in the room</b> (optional) at <code>/gah/CODE/tv</code> — it becomes the shared stage. Phones turn into controllers.</li>
+      <li><b>Create a game</b> and read out the 4-letter code. Everyone opens this site and types it in.</li>
+      <li><b>Put it on a TV</b> (optional) at <code>/CODE/tv</code> — that becomes the shared stage, and phones turn into controllers.</li>
       <li>One player is the <b>judge</b> each round. They pick a prompt from three.</li>
       <li>Everyone else answers with the funniest GIF from their hand of 7.</li>
-      <li>The judge flips the cards one at a time, then crowns a winner. First to the target score wins.</li>
+      <li>The judge flips the answers one at a time, then crowns a winner. First to the target score wins.</li>
     </ol>
     <p class="howto__note">
       The host sets judge rotation, points to win and timers in the lobby before starting.
+      Works in one room or over a call.
     </p>
   </section>
+
+  <footer class="landing__footer">
+    <p>Free. No accounts, no downloads, nothing kept after the game.</p>
+  </footer>
 </main>
 {% endblock %}
 
 {% block scripts %}
 <script>
+  // Uppercase as you type so the code always looks like the one being read out.
   const input = document.getElementById('code');
   input.addEventListener('input', () => {
     input.value = input.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
   });
+  if (input.value) input.select();
 </script>
 {% endblock %}

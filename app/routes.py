@@ -1,7 +1,6 @@
-from flask import Blueprint, jsonify, redirect, render_template, request, url_for
+"""Site-wide routes: health, and permanent redirects from the old /gah/* URLs."""
 
-from .games.registry import GAMES, find_game_for_code
-from .identity import current_pid
+from flask import Blueprint, jsonify, redirect, url_for
 
 main = Blueprint("main", __name__)
 
@@ -19,29 +18,25 @@ def healthz():
     )
 
 
-@main.route("/")
-def home():
-    # Mint the session cookie on the very first page view so the Socket.IO handshake
-    # always carries a player id.
-    current_pid()
-    return render_template(
-        "home.html",
-        title="Game Night",
-        games=GAMES,
-        error=request.args.get("error"),
-        code=request.args.get("code", ""),
-    )
+# --- legacy URLs -----------------------------------------------------------------
+# The game used to live under /gah/ while this was a multi-game platform. Anyone with
+# an open tab or a shared link keeps working.
+@main.route("/gah/")
+@main.route("/gah")
+def legacy_landing():
+    return redirect(url_for("gah.landing"), code=301)
 
 
-@main.post("/join")
-def join():
-    """Resolve a bare 4-letter code to whichever game owns it."""
-    code = (request.form.get("code") or "").strip().upper()
-    if len(code) != 4 or not code.isalpha():
-        return redirect(url_for("main.home", error="bad-code", code=code))
+@main.post("/gah/new")
+def legacy_new():
+    return redirect(url_for("gah.new_game"), code=308)  # 308 keeps it a POST
 
-    game = find_game_for_code(code)
-    if game is None:
-        return redirect(url_for("main.home", error="no-room", code=code))
 
-    return redirect(f"/{game.slug}/{code}")
+@main.route("/gah/<code:code>")
+def legacy_play(code: str):
+    return redirect(url_for("gah.play", code=code.upper()), code=301)
+
+
+@main.route("/gah/<code:code>/tv")
+def legacy_tv(code: str):
+    return redirect(url_for("gah.tv", code=code.upper()), code=301)

@@ -301,15 +301,28 @@ class Game:
         if len(self.players) < self.options.min_players:
             raise ActionError(f"Need at least {self.options.min_players} players")
 
+        # Deal from one shared deck, so a GIF can only ever be in one place. Check the
+        # deck is big enough *before* touching anyone's hand: running dry halfway would
+        # otherwise leave a half-dealt game. This matters when you swap the filler GIFs
+        # for your own — eight players need 56 distinct cards.
+        gif_deck = build_gif_deck(self._rng)
+        needed = len(self.players) * HAND_SIZE
+        if len(gif_deck) < needed:
+            raise ActionError(
+                f"Only {len(gif_deck)} GIFs installed — {len(self.players)} players need "
+                f"{needed}. Add more to app/static/gifs and run scripts/scan_gifs.py."
+            )
+        hands = {pid: gif_deck.draw_many(HAND_SIZE) for pid in self.players}
+
         self._rng.shuffle(self.seat_order)
         for seat, pid in enumerate(self.seat_order):
             self.players[pid].seat = seat
 
-        self._gif_deck = build_gif_deck(self._rng)
+        self._gif_deck = gif_deck
         self._prompt_deck = build_prompt_deck(self._rng)
-        for player in self.players.values():
+        for pid, player in self.players.items():
             player.score = 0
-            player.hand = self._gif_deck.draw_many(HAND_SIZE)
+            player.hand = hands[pid]
 
         self.round_number = 0
         self.champion_pid = None
@@ -559,6 +572,27 @@ class Game:
             return False
         return now - judge.away_since >= JUDGE_AWAY_GRACE
 
+    # -- invariants ----------------------------------------------------------
+    def card_locations(self) -> dict[str, list[str]]:
+        """Every GIF in the game and where it currently is.
+
+        There is exactly one deck and a card is only ever in one place: a hand, this
+        round's submissions, the draw pile or the discard pile. Drawing pops; playing
+        moves a card out of a hand into `submissions`; only after the round is awarded do
+        those go to the discard. That's what makes it impossible for two players to hold
+        the same GIF — tests assert it round after round, including across reshuffles.
+        """
+        # Once a round is awarded its cards go to the discard pile, but `submissions`
+        # keeps listing them so the winning card can still be shown. Counting both would
+        # double-count the same physical cards, so only count submissions still in flight.
+        in_flight = self.phase in (Phase.SUBMIT, Phase.REVEAL, Phase.PICK_WINNER)
+        return {
+            "hands": [card for player in self.players.values() for card in player.hand],
+            "submissions": [s.gif_id for s in self.submissions] if in_flight else [],
+            "draw": list(self._gif_deck.draw_pile) if self._gif_deck else [],
+            "discard": list(self._gif_deck.discard_pile) if self._gif_deck else [],
+        }
+
     # -- views ---------------------------------------------------------------
     def _player_view(self, player: Player) -> dict:
         return {
@@ -655,6 +689,14 @@ class Game:
             "hand": [gifs[g] for g in player.hand if g in gifs],
             "submitted_gif": gifs.get(submitted.gif_id) if submitted else None,
             "submitted_auto": submitted.auto if submitted else False,
+            # Which card on the table is yours, so your phone can mark it during the
+            # reveal. Only ever in *your* view — you already know what you played, so
+            # this tells you nothing new, and it tells nobody else anything at all.
+            "slot": (
+                self.submissions.index(submitted)
+                if submitted is not None and self.phase in (Phase.REVEAL, Phase.PICK_WINNER, Phase.ROUND_RESULT, Phase.GAME_OVER)
+                else None
+            ),
         }
         state["you"] = you
         # Only the judge sees the three prompts on offer.

@@ -41,7 +41,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.host == "0.0.0.0":
-        print(f"\n  🎲 Game Night")
+        print(f"\n  🃏 Gifs Against Humanity")
         print(f"      this computer:      http://localhost:{args.port}")
         print(f"      phones on the wifi: http://{_lan_ip()}:{args.port}\n")
 

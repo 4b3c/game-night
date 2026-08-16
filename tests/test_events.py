@@ -32,10 +32,10 @@ class Client:
     def __init__(self, app, code: str | None = None):
         self.http = app.test_client()
         if code is None:
-            response = self.http.post("/gah/new")
+            response = self.http.post("/new")
             code = response.headers["Location"].rstrip("/").rsplit("/", 1)[-1]
         else:
-            self.http.get(f"/gah/{code}")
+            self.http.get(f"/{code}")
         self.code = code
         self.sio = socketio.test_client(app, flask_test_client=self.http)
         assert self.sio.is_connected()

@@ -13,7 +13,7 @@
   data-code="{{ code }}"
   data-gif-base="{{ url_for('static', filename='gifs/') }}"
   data-tv-url="{{ url_for('gah.tv', code=code) }}"
-  data-home-url="{{ url_for('main.home') }}"
+  data-home-url="{{ url_for('gah.landing') }}"
   data-is-member="{{ 'true' if is_member else 'false' }}"
   data-score-min="{{ limits.score_min }}"
   data-score-max="{{ limits.score_max }}"

@@ -1,11 +1,25 @@
 from flask import Flask
+from werkzeug.routing import BaseConverter
 
 from .extensions import socketio
+
+
+class RoomCodeConverter(BaseConverter):
+    """A 4-letter room code, so `/<code:code>` matches /ABCD and nothing else.
+
+    Without this, a bare `/<code>` rule at the site root would also match /healthz,
+    /favicon.ico and anything else someone asks for.
+    """
+
+    regex = "[A-Za-z]{4}"
 
 
 def create_app(config_object: str = "app.config.Config") -> Flask:
     app = Flask(__name__)
     app.config.from_object(config_object)
+
+    # Converters must be registered before the blueprints that use them.
+    app.url_map.converters["code"] = RoomCodeConverter
 
     if app.config.get("BEHIND_PROXY"):
         from werkzeug.middleware.proxy_fix import ProxyFix

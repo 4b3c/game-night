@@ -124,7 +124,7 @@
   --gn-max-width:    720px;   /* phone-first content column */
   --gn-gap:          14px;
   --gn-bar-h:        56px;
-  --gn-hand-card:    50%;     /* how much of the screen one held GIF takes */
+  --gn-hand-card:    100%;    /* width of one held GIF (the deck is a vertical list) */
   --gn-tap:          48px;    /* minimum tap target */
 }
 
