@@ -177,3 +177,19 @@ your proxy at the new one.
 
 **Two players entered the same code and got different games.** Only ever run one worker —
 rooms live in one process's memory. Don't add `--workers 2`.
+
+**You deployed a fix but players still see the old behaviour.** A CDN in front (Cloudflare,
+say) caches CSS and JS aggressively — `cf-cache-status: HIT` with an `age` of hours means
+it's serving the copy from before your deploy. Every CSS/JS URL therefore carries a
+fingerprint (`/static/js/gah-play.js?v=9d58d51e4f`) derived from the file itself: change the
+file and the URL changes, so the stale copy is never requested again and the fix lands with
+no purge. Check it's working with:
+
+```bash
+curl -s https://your.domain/ | grep -o 'gah-play.js?v=[a-f0-9]*'
+```
+
+The **GIFs** are the exception — the client builds those URLs from a plain prefix, so they
+have no fingerprint. That's the right trade for 80 files that never change, but it means
+replacing a GIF *while keeping its filename* will keep serving the cached picture. Use new
+filenames (real GIFs will have their own anyway), or purge that path.
