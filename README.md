@@ -1,25 +1,174 @@
-# Flask Starter Template
+# 🎲 Game Night
 
-A reusable starter template for me to quickly set up Flask apps... Over the years I've found myself having a cool idea and wanting to create a small website for it, but I keep doing the same steps over and over again.This template is my solution to that problem, allowing me to quickly spin up a website, and then customize it to whatever idea I have.
+A free online party-game platform. Everyone plays on their own phone; an optional TV in the
+room is the shared stage. No accounts, no downloads, no database — open the site, type a
+4-letter code, pick a nickname.
 
-## Features
-- Blueprint structure
-- Base template with navbar
-- Example components (buttons, inputs, cards)
-- Static CSS/JS directories
-- Minimal requirements.txt
+First game: **Gifs Against Humanity** — Cards Against Humanity where the answers are GIFs.
 
-## Setup
-```
-python -m venv .venv
-// activate virtual environment
-pip install -r requirements.txt
+## Quick start
 
-npm install
-npm run dev
-```
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-dev.txt
 
-## Run
-```
 python run.py
 ```
+
+(The 80 filler GIFs are committed. `python scripts/make_placeholder_gifs.py` regenerates
+them, and needs the dev requirements for Pillow.)
+
+It prints your LAN address. Everyone in the room opens that on their phone:
+
+```
+  🎲 Game Night — phones on your wifi: http://192.168.1.42:5050
+```
+
+Create a game, read out the 4-letter code, and put the TV view up on a screen if you have
+one: `http://192.168.1.42:5050/gah/ABCD/tv`
+
+## How a round works
+
+1. One player is the **judge**. They tap "I'm ready" — nothing moves until they do, so the
+   game never runs away from the room.
+2. They pick one of three prompts (10s, then it picks for them).
+3. Everyone else plays the funniest GIF from their hand of 7 (90s, then it plays for them).
+   Playing a card immediately draws a replacement. The judge sees only face-down cards.
+4. The judge flips the cards one at a time — no timer, this is the fun part — then crowns a
+   winner. That player gets a point; only the winning card's author is revealed.
+5. First to the target score (default 5) wins. The host can start a rematch in the same room.
+
+4–8 players (2 with **test mode**, for playing with bots). The host sets judge rotation
+(circle or last round's winner), points to win, and both timers in the lobby.
+
+## Routes
+
+| Route | What it is |
+|---|---|
+| `/` | Home: join box + game tiles |
+| `/gah/` | Gifs Against Humanity: create a game, how it works |
+| `/gah/<CODE>` | The phone — join, lobby, play |
+| `/gah/<CODE>/tv` | The TV / spectator stage (read-only, never shows who played what) |
+
+While a TV is connected, phones collapse to "watch the TV" during the watch-only phases and
+keep only your hand and the judge's controls. Unplug the TV and the phones fill back in.
+
+## Playtesting on your own
+
+```bash
+python run.py                                # terminal 1
+python scripts/playtest_bots.py --bots 3     # terminal 2 — prints a code, bots fill the lobby
+python scripts/playtest_bots.py --bots 1 --start-at 2   # you + one bot, you judge every other round
+```
+
+The bots wait for you to join, start the game, and play their part.
+
+## Adjusting things
+
+**The look** — `app/static/css/theme.css` holds every colour, radius, outline, shadow, font
+and timing as a CSS custom property. Change a value, reload. No build step, no npm.
+
+**The prompts** — `app/data/prompts.json`. One object per card: `{"id", "text", "blanks"}`,
+with `___` marking the blank. Add or delete freely; ids only need to be unique.
+
+**The GIFs** — drop your own `.gif` files into `app/static/gifs/` and run
+`python scripts/scan_gifs.py` to rebuild the manifest. Aim for 60+ so eight hands of seven
+don't recycle constantly. `scripts/make_placeholder_gifs.py --count 200 --clean` regenerates
+filler instead.
+
+**The rules** — the knobs are constants at the top of `app/games/gah/engine.py`: hand size,
+prompt choices, player limits, score range, and the away-grace windows.
+
+## How it's built
+
+Flask + Flask-SocketIO (threading mode + `simple-websocket`, so no eventlet/gevent and it
+runs on Python 3.13+). Vanilla JS on the client, no framework, no bundler.
+
+```
+app/
+  routes.py                 home + code lookup
+  identity.py               the session cookie (a random id, nothing else)
+  games/registry.py         the game list — add game #2 here
+  games/gah/
+    engine.py               PURE game state machine: phases, rules, redacted views
+    decks.py                prompt + GIF decks (draw, discard, recycle)
+    rooms.py                in-memory room store, 4-letter codes, idle reaper
+    events.py               Socket.IO handlers -> one engine call -> broadcast
+    ticker.py               one 250ms loop: deadlines, away-players, reaping
+  static/css/theme.css      all design tokens
+  static/js/gah-play.js     the phone
+  static/js/gah-tv.js       the TV
+```
+
+Three ideas hold it together:
+
+- **The engine is pure Python.** No Flask, no Socket.IO, no I/O — hand it an action, it
+  mutates state or raises `ActionError`. That's why the rules are testable without a browser.
+- **The server is the only authority.** Every action is re-validated (right phase, right
+  actor, card actually in your hand). A stale or hostile phone can't corrupt a game.
+- **Redaction happens in the engine, not the templates.** `view_for(pid)` builds a payload
+  per recipient. A hidden card is sent as `{slot, revealed: false}` — no GIF id, no author —
+  so there is nothing to dig out of devtools.
+
+### Sessions and privacy
+
+Your browser gets a signed session cookie holding one random id. It has no `Expires`, so the
+browser drops it when it closes. Nicknames, hands and scores live in server memory keyed by
+that id, and the whole room is deleted 10 minutes after the last person leaves. Nothing is
+written to disk; there's no database and no tracking between games. Refreshing or locking
+your phone keeps your seat — same cookie, same seat, same hand and score.
+
+Because state is in memory, restarting the server ends games in progress. That's the trade
+for zero setup.
+
+## Tests
+
+```bash
+pytest                                        # 48 tests, no browser needed
+python scripts/simulate_game.py --players 8   # a real full game over real websockets
+```
+
+- `tests/test_engine.py` — the rules: dealing, refills, deck recycling, both judge
+  rotations, timeouts, away-player and away-judge handling, scoring, rematch, and that no
+  view ever leaks another player's hand or an unrevealed card's author.
+- `tests/test_events.py` — the transport: cookie identity, room membership, reconnects
+  keeping their seat, late joiners refused, host-only actions, judge-only actions.
+- `scripts/simulate_game.py` — bots play a whole game against the running server and assert
+  a single champion plus no leaked cards. Slower with 8 bots (they share one interpreter);
+  the timeout scales with the bot count.
+
+## Running it for real (Docker)
+
+```bash
+cp .env.example .env          # set SECRET_KEY; everything else has a default
+docker compose up -d --build
+curl localhost:5050/healthz
+```
+
+One container, published on `127.0.0.1:5050` only — your own nginx/Caddy/Traefik terminates
+TLS in front of it. **[DEPLOY.md](DEPLOY.md)** has the whole VPS walkthrough: paste-ready
+proxy snippets with the websocket upgrade headers, the DNS step, when to turn on the Secure
+cookie, and troubleshooting.
+
+Inside the image it's `gunicorn` with a single gevent websocket worker on Python 3.12.
+One worker is deliberate: rooms live in that process's memory, so a second one would hand
+two players with the same code two different games.
+
+## Adding the second game
+
+1. `app/games/<slug>/` with the same split: a pure engine, a room store, Socket.IO events.
+2. Append a `GameInfo` to `app/games/registry.py` and register its code resolver so the home
+   page's join box can route a bare code to it.
+3. Templates in `app/templates/<slug>/`, styles reusing the tokens in `theme.css`.
+
+## Notes
+
+- `kill -USR1 <pid>` dumps every server thread's stack without killing it — handy if a game
+  ever looks stuck.
+- The Socket.IO client is vendored at `app/static/js/vendor/socket.io.min.js`, so the game
+  works on a LAN with no internet. The only network-dependent nicety is the Google Fonts
+  link in `base.html`; the fallback stacks in `theme.css` cover its absence.
+- Locally, Socket.IO runs in threading mode (works on any Python, including 3.13+). The
+  Docker image switches to gevent via `GN_ASYNC_MODE`, monkey-patched in `wsgi.py`.
+- Port 5050, not 5000: macOS AirPlay Receiver already owns 5000.

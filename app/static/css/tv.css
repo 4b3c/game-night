@@ -1,0 +1,580 @@
+/* ===========================================================================
+   GAME NIGHT — the TV / spectator stage
+   Sized to be read from a sofa: everything scales with vw/vh, nothing scrolls,
+   nothing is ever clipped at 1280x720 or 1920x1080.
+   All values come from theme.css.
+   =========================================================================== */
+
+.page-tv { overflow: hidden; }
+
+.tv {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(260px, 21vw) 1fr;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+.tv--offline::after {
+  content: '📡 reconnecting…';
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  padding: 8px 16px;
+  border: var(--gn-outline) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius-pill);
+  background: var(--gn-danger);
+  color: var(--gn-danger-ink);
+  font-family: var(--gn-font-display);
+  font-weight: 800;
+  z-index: 40;
+}
+.tv__confetti {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 30;
+}
+
+/* --- side rail ----------------------------------------------------------- */
+.tvside {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6vh;
+  padding: 2.4vh 1.3vw;
+  background: var(--gn-bg-2);
+  border-right: var(--gn-outline-lg) solid var(--gn-outline-color);
+  box-shadow: 5px 0 0 rgba(0, 0, 0, .22);
+  overflow: hidden;
+}
+.tvside__head { text-align: center; flex: 0 0 auto; }
+.tvside__label {
+  display: block;
+  margin-bottom: .7vh;
+  font-size: clamp(.7rem, .85vw, 1rem);
+  text-transform: uppercase;
+  letter-spacing: var(--gn-track-label);
+  color: var(--gn-ink-dim);
+}
+/* The game code always lives on a cream ticket — here and on the lobby screen. */
+.tvside__code {
+  display: block;
+  padding: .5vh .4vw;
+  border: var(--gn-outline) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius-sm);
+  background: var(--gn-surface);
+  color: var(--gn-surface-ink);
+  box-shadow: var(--gn-shadow);
+  font-family: var(--gn-font-display);
+  font-size: clamp(1.9rem, 3.6vw, 3.2rem);
+  font-weight: 800;
+  letter-spacing: var(--gn-track-code);
+  text-indent: var(--gn-track-code);
+  transform: rotate(var(--gn-tilt-c));
+}
+
+.tvscores {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.2vh;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.tvscore {
+  position: relative;
+  /* grow to share out the rail so four players don't leave a hole, but never so
+     tall that eight players stop fitting */
+  flex: 1 1 auto;
+  max-height: 18vh;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: 'av name num' 'av pips pips';
+  align-items: center;
+  gap: .3vh .8vw;
+  padding: 1.1vh .9vw;
+  border: var(--gn-outline) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius-sm);
+  background: var(--gn-bg-3);
+  box-shadow: var(--gn-shadow-press);
+}
+.tvscore .avatar {
+  grid-area: av;
+  width: 3vw;
+  height: 3vw;
+  min-width: 40px;
+  min-height: 40px;
+  font-size: 1.5vw;
+}
+.tvscore__name {
+  grid-area: name;
+  font-family: var(--gn-font-display);
+  font-size: clamp(1rem, 1.5vw, 1.7rem);
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tvscore__num {
+  grid-area: num;
+  font-family: var(--gn-font-display);
+  font-size: clamp(1.3rem, 2.2vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--gn-accent-4);
+}
+.tvscore .pips { grid-area: pips; }
+.tvscore .pip { width: 1vw; height: 1vw; min-width: 11px; min-height: 11px; }
+.tvscore__flag {
+  position: absolute;
+  right: .7vw;
+  bottom: .5vh;
+  font-size: 1.2vw;
+}
+.tvscore--judge {
+  /* tint layered over the row colour, not instead of it */
+  background: linear-gradient(rgba(255, 213, 61, .16), rgba(255, 213, 61, .16)), var(--gn-bg-3);
+  box-shadow: inset 0 0 0 4px var(--gn-accent-4), var(--gn-shadow-press);
+}
+.tvscore--judge .tvscore__name::before { content: '👑 '; }
+.tvscore--away { opacity: .42; }
+.tvscore--champ {
+  background: var(--gn-accent-4);
+  color: var(--gn-accent-4-ink);
+  box-shadow: var(--gn-shadow);
+  transform: rotate(var(--gn-tilt-c)) scale(1.02);
+}
+.tvscore--champ .tvscore__num { color: var(--gn-accent-4-ink); }
+.tvscore--champ .pip { border-color: var(--gn-accent-4-ink); background: rgba(0, 0, 0, .16); }
+.tvscore--champ .pip--on { background: var(--gn-accent-4-ink); }
+.tvscore--gain { animation: score-gain var(--gn-slow-ms) var(--gn-ease); }
+@keyframes score-gain {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.11) rotate(-2deg); box-shadow: 0 0 0 5px var(--gn-accent-3), var(--gn-shadow); }
+  100% { transform: scale(1); }
+}
+
+.tvside__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: .6vw;
+  flex: 0 0 auto;
+  font-size: clamp(.75rem, .95vw, 1.05rem);
+  text-transform: uppercase;
+  letter-spacing: var(--gn-track-label);
+  color: var(--gn-ink-dim);
+}
+
+/* --- main stage ----------------------------------------------------------
+   `justify-content: center` only has anything to do when the card grid is
+   hidden (it's `flex: 1` when shown), so idle screens sit dead centre instead of
+   leaving a void under them. */
+.tvmain {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2vh;
+  padding: 5.4vh 2.2vw 2.6vh;
+  overflow: hidden;
+}
+/* The countdown is furniture: it always lives along the very top of the stage
+   rather than joining the centred group below it. */
+.tvtimer {
+  position: absolute;
+  inset: 1.8vh 2.2vw auto;
+  height: 2.4vh;
+  min-height: 18px;
+  overflow: hidden;
+  border: var(--gn-outline) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius-pill);
+  background: var(--gn-bg-well);
+  flex: 0 0 auto;
+}
+.tvtimer__fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: var(--gn-accent-3);
+  transition: background 200ms linear;
+}
+/* the shared countdown helper puts `timer--urgent` on whichever wrapper it drives */
+.tvtimer--urgent .tvtimer__fill,
+.tvtimer.timer--urgent .tvtimer__fill { background: var(--gn-danger); }
+.tvtimer__label {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--gn-font-display);
+  font-size: clamp(.7rem, 1.5vh, 1.1rem);
+  font-weight: 800;
+  color: var(--gn-ink);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .5);
+}
+
+.tvstage { flex: 0 1 auto; min-height: 0; }
+.tvpanel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6vh;
+  align-items: center;
+  text-align: center;
+}
+.tvpanel__kicker {
+  padding: .5vh 1.2vw;
+  border: var(--gn-outline-sm) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius-pill);
+  background: rgba(0, 0, 0, .3);
+  font-size: clamp(.95rem, 1.5vw, 1.6rem);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--gn-track-label);
+  color: var(--gn-ink);
+}
+.tvpanel__title {
+  font-size: clamp(1.7rem, 4vw, 4.6rem);
+  text-wrap: balance;
+  -webkit-text-stroke: 3px var(--gn-outline-color);
+  paint-order: stroke fill;
+}
+.tvpanel__title--win {
+  color: var(--gn-accent-4);
+  display: flex;
+  align-items: center;
+  gap: 1vw;
+  text-align: left;
+}
+.tvpanel__sub { font-size: clamp(1rem, 1.7vw, 1.9rem); color: var(--gn-ink-dim); }
+/* emoji avatars must not inherit the headline's ink stroke */
+.tvpanel__title .avatar, .tvpanel__kicker .avatar { -webkit-text-stroke: 0; text-shadow: none; }
+
+/* --- the prompt: the hero of the whole screen ---------------------------- */
+.prompt--tv {
+  max-width: 26ch;
+  padding: 2.4vh 2vw 2.8vh;
+  border: var(--gn-outline-lg) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius);
+  background: var(--gn-surface);
+  color: var(--gn-surface-ink);
+  box-shadow: 10px 11px 0 var(--gn-accent-1), 10px 11px 0 4px var(--gn-outline-color);
+  font-family: var(--gn-font-display);
+  font-size: clamp(1.7rem, 3.5vw, 3.7rem);
+  font-weight: 800;
+  line-height: 1.1;
+  text-wrap: balance;
+  transform: rotate(var(--gn-tilt-c));
+}
+.prompt--tvsmall {
+  max-width: 40ch;
+  padding: 1vh 1.4vw 1.2vh;
+  border: var(--gn-outline) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius-sm);
+  background: var(--gn-surface);
+  color: var(--gn-surface-ink);
+  box-shadow: var(--gn-shadow);
+  font-family: var(--gn-font-display);
+  font-size: clamp(1rem, 1.8vw, 1.9rem);
+  font-weight: 700;
+  line-height: 1.2;
+  transform: rotate(var(--gn-tilt-b));
+}
+.prompt--tv .prompt__blank, .prompt--tvsmall .prompt__blank {
+  display: inline-block;
+  width: 3.2em;
+  height: .13em;
+  margin: 0 .1em;
+  vertical-align: .18em;
+  background: var(--gn-accent-2);
+  border-radius: 4px;
+}
+
+/* --- lobby --------------------------------------------------------------- */
+.tvjoin {
+  display: flex;
+  align-items: center;
+  gap: 1.4vw;
+  font-size: clamp(1.1rem, 2vw, 2.2rem);
+}
+.tvjoin__code {
+  padding: 1vh 1.4vw;
+  border: var(--gn-outline-lg) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius);
+  background: var(--gn-surface);
+  color: var(--gn-surface-ink);
+  box-shadow: 9px 10px 0 var(--gn-accent-2), 9px 10px 0 4px var(--gn-outline-color);
+  font-family: var(--gn-font-display);
+  font-size: clamp(2.6rem, 7vw, 6.5rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: var(--gn-track-code);
+  text-indent: var(--gn-track-code);
+  transform: rotate(var(--gn-tilt-b));
+}
+.tvlobby { display: flex; flex-wrap: wrap; gap: 1vh 1vw; justify-content: center; }
+.tvlobby__player {
+  display: flex;
+  align-items: center;
+  gap: .6vw;
+  padding: .7vh 1.2vw .7vh .5vw;
+  border: var(--gn-outline) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius-pill);
+  background: var(--gn-bg-3);
+  box-shadow: var(--gn-shadow-press);
+  font-family: var(--gn-font-display);
+  font-size: clamp(1rem, 1.6vw, 1.8rem);
+  font-weight: 800;
+  animation: pop-in var(--gn-pop-ms) var(--gn-ease-bounce);
+}
+.tvlobby__player:nth-child(odd) { transform: rotate(var(--gn-tilt-c)); }
+.tvlobby__player:nth-child(even) { transform: rotate(var(--gn-tilt-b)); }
+.tvlobby__player--away { opacity: .42; }
+@keyframes pop-in { from { transform: scale(.7); opacity: 0; } }
+
+.tvwait {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .8vh .6vw;
+  justify-content: center;
+  align-items: center;
+  font-size: clamp(1rem, 1.7vw, 1.9rem);
+  color: var(--gn-ink-dim);
+}
+.tvwait--done { color: var(--gn-accent-3); font-family: var(--gn-font-display); font-weight: 800; }
+.tvwait--think::after { content: '🤔'; }
+.tvchip {
+  display: inline-flex;
+  align-items: center;
+  gap: .3vw;
+  padding: .5vh 1vw;
+  border: var(--gn-outline-sm) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius-pill);
+  background: var(--gn-bg-3);
+  color: var(--gn-ink);
+  font-weight: 800;
+}
+.tvchip--away { opacity: .5; }
+
+/* --- cards on the TV -----------------------------------------------------
+   Columns are plain `1fr`, so the pile can never be wider than the stage. The
+   whole grid is then capped by `--cap`, a per-column *height* budget in vh, which
+   is what stops it growing taller than the stage. Set `--cols` + `--cap` per
+   card count and both axes take care of themselves. */
+.tvcards {
+  --cols: 3;
+  --cap: 56vh;
+  --gapx: 1.4vw;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  gap: 3vh var(--gapx);
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  width: 100%;
+  max-width: min(100%, calc(var(--cols) * var(--cap) + (var(--cols) - 1) * var(--gapx)));
+  margin-inline: auto;
+  align-content: center;
+  justify-content: center;
+  justify-items: center;
+  align-items: center;
+  padding-bottom: 2.6vh;   /* room for the author chips hanging off the bottom */
+}
+.tvcards[data-count="1"] { --cols: 1; --cap: 62vh; }
+.tvcards[data-count="2"] { --cols: 2; }
+.tvcards[data-count="3"] { --cols: 3; }
+.tvcards[data-count="4"] { --cols: 2; --cap: 27vh; }
+.tvcards[data-count="5"],
+.tvcards[data-count="6"] { --cols: 3; --cap: 27vh; }
+.tvcards[data-count="7"] { --cols: 4; --cap: 27vh; }
+/* On the champion screen the standings are the story — shrink the pile and let it
+   hug them instead of floating in the space below. */
+#tv-stage:has(.tvpanel--over) ~ .tvcards {
+  --cap: 21vh;
+  flex: 0 0 auto;
+  gap: 2vh 1.2vw;
+}
+
+.tvcard {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  perspective: 1400px;
+}
+.tvcard:nth-child(odd) { rotate: var(--gn-tilt-c); }
+.tvcard:nth-child(even) { rotate: var(--gn-tilt-b); }
+.tvcard__inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform var(--gn-flip-ms) var(--gn-ease);
+}
+.tvcard--up .tvcard__inner { transform: rotateY(180deg); }
+.tvcard__back, .tvcard__front {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  backface-visibility: hidden;
+  border: var(--gn-outline-lg) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius);
+  box-shadow: var(--gn-shadow-lg);
+}
+.tvcard__back {
+  background: repeating-linear-gradient(45deg, var(--gn-bg-3) 0 15px, var(--gn-bg-2) 15px 30px);
+}
+.tvcard__mark {
+  padding: .6vh 1.2vw;
+  border: var(--gn-outline) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius-pill);
+  background: var(--gn-accent-4);
+  color: var(--gn-accent-4-ink);
+  font-family: var(--gn-font-display);
+  font-size: clamp(.85rem, 1.5vw, 1.6rem);
+  font-weight: 800;
+  letter-spacing: .1em;
+  transform: rotate(-6deg);
+}
+.tvcard__front { transform: rotateY(180deg); background: var(--gn-bg-well); }
+.tvcard__img { width: 100%; height: 100%; object-fit: cover; }
+
+.tvcard--slot.tvcard--empty { opacity: .35; }
+.tvcard--slot.tvcard--empty .tvcard__back {
+  border-style: dashed;
+  box-shadow: none;
+  background: rgba(255, 255, 255, .05);
+}
+.tvcard--slot.tvcard--empty .tvcard__mark { opacity: .45; background: transparent; color: var(--gn-ink-dim); border-style: dashed; }
+.tvcard--slot.tvcard--in { animation: card-land 440ms var(--gn-ease-bounce); }
+@keyframes card-land {
+  from { transform: translateY(-46px) rotate(-9deg); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.tvcard__author {
+  position: absolute;
+  left: 50%;
+  bottom: -.6em;
+  transform: translateX(-50%) rotate(-2deg);
+  display: flex;
+  align-items: center;
+  gap: .4vw;
+  max-width: 120%;
+  padding: .4vh .9vw .4vh .3vw;
+  border: var(--gn-outline) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius-pill);
+  background: var(--gn-accent-4);
+  color: var(--gn-accent-4-ink);
+  font-family: var(--gn-font-display);
+  font-size: clamp(.9rem, 1.4vw, 1.6rem);
+  font-weight: 800;
+  white-space: nowrap;
+  z-index: 5;
+  animation: chip-in var(--gn-pop-ms) var(--gn-ease-bounce);
+}
+.tvcard__author:empty { display: none; }
+.tvcard__author .avatar {
+  width: 2vw;
+  height: 2vw;
+  min-width: 28px;
+  min-height: 28px;
+  font-size: 1vw;
+  border-width: var(--gn-outline-sm);
+}
+@keyframes chip-in { from { transform: translateX(-50%) scale(.5); opacity: 0; } }
+
+.tvcard--winner { z-index: 6; animation: tv-winner var(--gn-slow-ms) var(--gn-ease); }
+.tvcard--winner .tvcard__front {
+  box-shadow: 0 0 0 7px var(--gn-accent-4), var(--gn-shadow-lg);
+}
+.tvcard--dimmed {
+  opacity: .3;
+  filter: saturate(.4);
+  transform: scale(.92);
+  transition: opacity 400ms ease, transform 400ms ease;
+}
+@keyframes tv-winner {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.14) rotate(-2deg); }
+  100% { transform: scale(1.06); }
+}
+
+/* --- winner / game over -------------------------------------------------- */
+.tvchamp {
+  display: flex;
+  align-items: center;
+  gap: 1.4vw;
+  font-family: var(--gn-font-display);
+  font-size: clamp(2.2rem, 5.6vw, 6rem);
+  line-height: 1;
+  color: var(--gn-accent-4);
+  -webkit-text-stroke: 4px var(--gn-outline-color);
+  paint-order: stroke fill;
+  text-shadow: 6px 7px 0 var(--gn-outline-color);
+}
+.tvchamp .avatar { -webkit-text-stroke: 0; text-shadow: none; }
+.tvfinals { display: flex; flex-direction: column; gap: 1vh; width: min(52vw, 760px); }
+.tvfinal {
+  display: flex;
+  align-items: center;
+  gap: 1vw;
+  padding: .7vh 1.2vw .7vh .5vw;
+  border: var(--gn-outline) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius-sm);
+  background: var(--gn-bg-3);
+  box-shadow: var(--gn-shadow-press);
+  font-size: clamp(1rem, 1.7vw, 1.9rem);
+}
+.tvfinal--champ {
+  background: var(--gn-accent-4);
+  color: var(--gn-accent-4-ink);
+  box-shadow: var(--gn-shadow);
+  transform: rotate(var(--gn-tilt-c));
+}
+.tvfinal__rank { font-family: var(--gn-font-display); width: 2ch; opacity: .65; }
+.tvfinal__name {
+  flex: 1 1 auto;
+  text-align: left;
+  font-family: var(--gn-font-display);
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tvfinal__score { font-family: var(--gn-font-display); font-size: 1.3em; font-weight: 800; }
+.tvfinal .avatar { width: 2.6vw; height: 2.6vw; min-width: 36px; min-height: 36px; font-size: 1.3vw; }
+
+/* --- portrait / small TVs ------------------------------------------------ */
+@media (max-aspect-ratio: 1/1) {
+  .tv { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .tvside {
+    border-right: 0;
+    border-bottom: var(--gn-outline-lg) solid var(--gn-outline-color);
+    box-shadow: 0 5px 0 rgba(0, 0, 0, .22);
+    flex-direction: row;
+    align-items: center;
+    gap: 2vw;
+    overflow-x: auto;
+  }
+  .tvside__code { font-size: clamp(1.4rem, 4vw, 2.4rem); }
+  .tvscores { flex-direction: row; }
+  .tvscore { grid-template-areas: 'av name num' 'av pips pips'; }
+  .tvscore .avatar { width: 6vw; height: 6vw; font-size: 3vw; }
+  .tvside__foot { display: none; }
+  .tvcards { --cap: 30vh; }
+}
+
+/* --- reduced motion ------------------------------------------------------
+   theme.css collapses the shared durations and tilts; these loops and pops need
+   switching off by name. (The confetti already opts out in JS.) */
+@media (prefers-reduced-motion: reduce) {
+  .tvlobby__player,
+  .tvcard--slot.tvcard--in,
+  .tvcard--winner,
+  .tvcard__author,
+  .tvscore--gain,
+  .tvwait--think { animation: none; }
+}

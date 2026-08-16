@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block body_class %}page-play{% endblock %}
+{% block chrome %}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/game.css') }}">
+{% endblock %}
+
+{% block content %}
+<div
+  id="play"
+  class="play"
+  data-code="{{ code }}"
+  data-gif-base="{{ url_for('static', filename='gifs/') }}"
+  data-tv-url="{{ url_for('gah.tv', code=code) }}"
+  data-home-url="{{ url_for('main.home') }}"
+  data-is-member="{{ 'true' if is_member else 'false' }}"
+  data-score-min="{{ limits.score_min }}"
+  data-score-max="{{ limits.score_max }}"
+  data-min-players="{{ limits.min_players }}"
+  data-test-min-players="{{ limits.test_min_players }}"
+  data-max-players="{{ limits.max_players }}">
+
+  <!-- Server-rendered first paint: the join card. JS takes over once connected. -->
+  <header class="playbar" id="playbar" hidden>
+    <div class="playbar__left">
+      <span class="playbar__code" id="bar-code">{{ code }}</span>
+      <span class="playbar__round" id="bar-round"></span>
+    </div>
+    <div class="playbar__right">
+      <span class="playbar__judge" id="bar-judge"></span>
+      <span class="timer" id="timer" hidden>
+        <span class="timer__fill" id="timer-fill"></span>
+        <span class="timer__label" id="timer-label"></span>
+      </span>
+    </div>
+  </header>
+
+  <div class="scorestrip" id="scorestrip" hidden></div>
+
+  <main class="stage" id="stage">
+    <section class="panel panel--join" id="boot">
+      <h1 class="panel__title">Gifs Against Humanity</h1>
+      <p class="panel__code">Game <b>{{ code }}</b></p>
+      <p class="panel__hint" id="boot-hint">Connecting…</p>
+    </section>
+  </main>
+
+  <section class="handarea" id="handarea" hidden>
+    <h2 class="handarea__title" id="handarea-title">Your GIFs</h2>
+    <div class="hand" id="hand"></div>
+  </section>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/vendor/socket.io.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/gn-socket.js') }}"></script>
+<script src="{{ url_for('static', filename='js/gah-play.js') }}"></script>
+{% endblock %}

@@ -1,5 +1,91 @@
 {% extends "base.html" %}
+{% block body_class %}page-home{% endblock %}
+
 {% block content %}
-<h1>Welcome</h1>
-<p>This is your Flask starter template.</p>
+<main class="home">
+
+  <header class="hero">
+    <h1 class="hero__title">
+      <span class="hero__word hero__word--1">GAME</span>
+      <span class="hero__word hero__word--2">NIGHT</span>
+    </h1>
+    <p class="hero__tagline">Free party games. Everyone plays on their phone.</p>
+    <ul class="hero__badges" aria-hidden="true">
+      <li class="hero__badge">No app</li>
+      <li class="hero__badge">No accounts</li>
+      <li class="hero__badge">4–8 players</li>
+    </ul>
+  </header>
+
+  <section class="joinbox" aria-labelledby="joinbox-title">
+    <h2 class="joinbox__title" id="joinbox-title">
+      <span aria-hidden="true">🎟️</span> Got a code?
+    </h2>
+    <form class="joinbox__form" method="post" action="{{ url_for('main.join') }}" autocomplete="off">
+      <input
+        class="codeinput {% if error %}codeinput--error{% endif %}"
+        type="text"
+        name="code"
+        id="code"
+        value="{{ code }}"
+        placeholder="ABCD"
+        maxlength="4"
+        minlength="4"
+        pattern="[A-Za-z]{4}"
+        inputmode="latin"
+        autocapitalize="characters"
+        spellcheck="false"
+        aria-label="4-letter game code"
+        required>
+      <button class="btn btn--go" type="submit">Join</button>
+    </form>
+    {% if error == 'no-room' %}
+      <p class="joinbox__error" role="alert">No game with that code. Maybe it ended?</p>
+    {% elif error == 'bad-code' %}
+      <p class="joinbox__error" role="alert">Codes are 4 letters, like <b>WXYZ</b>.</p>
+    {% else %}
+      <p class="joinbox__hint">Whoever started the game has it</p>
+    {% endif %}
+  </section>
+
+  <section class="games" aria-labelledby="games-title">
+    <h2 class="sectiontitle" id="games-title">Pick a game</h2>
+    <ul class="games__grid">
+      {% for g in games %}
+      <li class="gamecard {% if not g.available %}gamecard--soon{% endif %}" data-accent="{{ g.accent }}">
+        {% if g.available %}
+        <a class="gamecard__link" href="/{{ g.slug }}/">
+        {% else %}
+        <div class="gamecard__link" aria-disabled="true">
+        {% endif %}
+          <span class="gamecard__emoji" aria-hidden="true">{{ g.emoji }}</span>
+          <h3 class="gamecard__name">{{ g.name }}</h3>
+          <p class="gamecard__tagline">{{ g.tagline }}</p>
+          <p class="gamecard__players">{{ g.players }}</p>
+          {% if g.available %}
+            <span class="gamecard__cta">Play →</span>
+          {% else %}
+            <span class="gamecard__cta gamecard__cta--soon">Coming soon</span>
+          {% endif %}
+        {% if g.available %}</a>{% else %}</div>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <footer class="home__footer">
+    <p>Made for a room full of people, or a Discord call. No accounts, no downloads.</p>
+  </footer>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Uppercase as you type so the code always looks like the one on the TV.
+  const input = document.getElementById('code');
+  input.addEventListener('input', () => {
+    input.value = input.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  });
+  if (input.value) input.select();
+</script>
 {% endblock %}

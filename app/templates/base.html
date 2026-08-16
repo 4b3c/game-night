@@ -2,31 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>{{ title or "Flask + Tailwind" }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#121a3d">
+  <title>{{ title or "Game Night" }}</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
 
-  <!-- Tailwind CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='dist/tailwind.css') }}">
+  <!-- Optional: if there's no internet the fallback stacks in theme.css take over. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Figtree:wght@600;700;800;900&display=swap" rel="stylesheet">
 
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  {% block head %}{% endblock %}
 </head>
-<body class="bg-slate-900 text-slate-100">
-  <nav class="bg-slate-800 px-4 py-3 flex gap-4">
-    <a href="{{ url_for('main.home') }}" class="text-sm font-medium hover:text-sky-300">
-      Home
+<body class="{% block body_class %}{% endblock %}">
+  {% block chrome %}
+  <nav class="topnav">
+    <a class="topnav__brand" href="{{ url_for('main.home') }}">
+      <span class="topnav__dice" aria-hidden="true">🎲</span>
+      <span>Game&nbsp;Night</span>
     </a>
-    <a href="{{ url_for('main.example') }}" class="text-sm font-medium hover:text-sky-300">
-      Example
-    </a>
-    <a href="{{ url_for('main.example') }}" class="text-sm font-medium hover:text-sky-300">
-      Example
-    </a>
-    <a href="{{ url_for('main.example2') }}" class="text-sm font-medium hover:text-sky-300">
-      Example 2
-    </a>
+    {% block nav_extra %}{% endblock %}
   </nav>
+  {% endblock %}
 
-  <main class="max-w-4xl mx-auto px-4 py-8">
-    {% block content %}{% endblock %}
-  </main>
+  {% block content %}{% endblock %}
+
+  {% block scripts %}{% endblock %}
 </body>
 </html>

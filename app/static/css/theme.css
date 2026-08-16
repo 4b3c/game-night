@@ -1,0 +1,153 @@
+/* ===========================================================================
+   GAME NIGHT — THEME TOKENS
+   ---------------------------------------------------------------------------
+   This is the only file you need to touch to re-skin the whole platform.
+   Every colour, radius, outline, shadow, font and duration used in
+   base.css / game.css / tv.css reads from here. Change a value, reload, done —
+   no build step, no hunting through three stylesheets.
+
+   Palette: "MIDNIGHT FUNFAIR"
+     A cool midnight-blue ground (easy on eyes in a dim living room, and it makes
+     everything on top of it glow on a TV) + warm cream "paper" for cards +
+     near-black cartoon ink for every outline, and four sunset accents:
+     TANGERINE · BUBBLEGUM · MINT · LEMON.
+     Warm accents on a cool ground is the loudest, friendliest contrast there is,
+     and none of the four ever fights another for the same job:
+       accent-1 tangerine  = primary / brand / "this is the thing"
+       accent-2 bubblegum  = the fill-in-the-blank, playful highlights, "you"
+       accent-3 mint       = go / success / timer running / lime-ish energy
+       accent-4 lemon      = the judge, points, crowns, winners
+   =========================================================================== */
+
+:root {
+  /* --- backdrop ---------------------------------------------------------- */
+  --gn-bg:            #121a3d;   /* page background — midnight blue */
+  --gn-bg-2:          #1e2a5e;   /* raised background (bars, rails, panels) */
+  --gn-bg-3:          #2c3d80;   /* hover / inset / card backs */
+  --gn-bg-well:       #0b1130;   /* the darkest wells (behind cards, timers) */
+
+  /* --- surfaces (the "paper" cards and buttons are printed on) ----------- */
+  --gn-surface:       #fff8ea;   /* card stock */
+  --gn-surface-2:     #ffe9c0;   /* aged card stock, second-tier surface */
+  --gn-surface-ink:   #15122e;   /* text on surfaces */
+  --gn-surface-dim:   #6a6482;   /* quiet text on surfaces */
+  --gn-surface-hint:  #c9bda2;   /* placeholder text inside cream inputs */
+
+  /* --- text on the backdrop --------------------------------------------- */
+  --gn-ink:           #fff7ea;   /* warm cream — the main voice */
+  --gn-ink-dim:       #a6bbef;   /* cool blue-grey — hints and labels (7:1 on bg) */
+
+  /* --- accents (four, on purpose) --------------------------------------- */
+  --gn-accent-1:      #ff8a1f;   /* TANGERINE  — primary */
+  --gn-accent-1-ink:  #2a1400;
+  --gn-accent-2:      #ff4d9d;   /* BUBBLEGUM  — playful highlight */
+  --gn-accent-2-ink:  #2e0018;
+  --gn-accent-3:      #3ce8b8;   /* MINT       — go / success */
+  --gn-accent-3-ink:  #032a20;
+  --gn-accent-4:      #ffd53d;   /* LEMON      — judge / points / winners */
+  --gn-accent-4-ink:  #2b1f00;
+
+  --gn-danger:        #ef3b30;   /* red, deliberately deeper than tangerine */
+  --gn-danger-ink:    #fff7ea;
+  --gn-go:            var(--gn-accent-3);   /* "do the thing" buttons */
+  --gn-go-ink:        var(--gn-accent-3-ink);
+
+  /* --- cartoon shape ---------------------------------------------------- */
+  --gn-outline:       3px;                   /* cartoon line weight */
+  --gn-outline-lg:    4px;                   /* hero shapes, TV cards */
+  --gn-outline-sm:    2px;                   /* chips, pips, tags */
+  --gn-outline-color: #0c0a20;               /* the ink everything is drawn with */
+
+  --gn-radius:        22px;
+  --gn-radius-sm:     14px;
+  --gn-radius-xs:     9px;
+  --gn-radius-pill:   999px;
+
+  /* Chunky offset shadows — no blur, ever. That's what makes it cartoon. */
+  --gn-shadow:        5px 5px 0 var(--gn-outline-color);
+  --gn-shadow-lg:     9px 9px 0 var(--gn-outline-color);
+  --gn-shadow-xl:     14px 14px 0 var(--gn-outline-color);
+  --gn-shadow-press:  2px 2px 0 var(--gn-outline-color);
+  /* A slab of colour peeking out from behind a card, then the ink line behind that. */
+  --gn-shadow-accent: 5px 6px 0 var(--gn-accent-1), 9px 10px 0 var(--gn-outline-color);
+  --gn-bevel:         inset 0 -5px 0 rgba(0, 0, 0, .22);   /* soft bottom edge */
+  --gn-sheen:         inset 0 3px 0 rgba(255, 255, 255, .18);
+
+  /* --- derived washes ---------------------------------------------------
+     Mixed from the accents above, so re-colouring an accent re-colours these too.
+     Every one of them degrades to a plain surface if color-mix is unavailable. */
+  --gn-tint-judge:    color-mix(in srgb, var(--gn-accent-4) 16%, transparent);
+  --gn-glow-1:        color-mix(in srgb, var(--gn-accent-1) 20%, transparent);
+  --gn-glow-2:        color-mix(in srgb, var(--gn-accent-2) 18%, transparent);
+  --gn-glow-3:        color-mix(in srgb, var(--gn-accent-3) 12%, transparent);
+  --gn-dots:          rgba(255, 255, 255, .05);   /* the confetti dot grid */
+
+  /* --- motion ----------------------------------------------------------- */
+  --gn-flip-ms:       520ms;
+  --gn-pop-ms:        260ms;
+  --gn-slow-ms:       800ms;
+  --gn-ease:          cubic-bezier(.34, 1.56, .64, 1);   /* overshoot = cartoon */
+  --gn-ease-out:      cubic-bezier(.22, .9, .3, 1);
+  --gn-ease-bounce:   cubic-bezier(.28, 1.8, .5, 1);     /* extra squash & pop */
+
+  /* Fixed tilts so nothing ever sits perfectly square. */
+  --gn-tilt-a:        -1.6deg;
+  --gn-tilt-b:         1.2deg;
+  --gn-tilt-c:        -0.7deg;
+  /* the stronger pair used to fan the cards you're holding */
+  --gn-fan-a:         -2.2deg;
+  --gn-fan-b:          1.9deg;
+
+  /* --- type ------------------------------------------------------------- */
+  /* Display: rounded, chunky, cartoon.  Body: clean geometric, so the two
+     never blur together. Both stacks fall back gracefully with no network. */
+  --gn-font-display: 'Baloo 2', 'Fredoka One', 'Arial Rounded MT Bold', 'Avenir Next', 'Arial Black', system-ui, sans-serif;
+  --gn-font-body:    'Figtree', 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --gn-tracking:     .005em;
+  --gn-track-code:   .22em;   /* the 4-letter game code, everywhere */
+  --gn-track-label:  .13em;   /* small ALL-CAPS labels */
+
+  /* --- player colours ---------------------------------------------------
+     Eight steps around the wheel, all bright enough that the ink outline and a
+     dark emoji read on top, and no two neighbours collapse into each other on
+     the TV scoreboard. Reorder freely — the JS just asks for av-1..av-8. */
+  --gn-av-1: #ff5470;   /* coral    */
+  --gn-av-2: #ff9b21;   /* tangerine*/
+  --gn-av-3: #ffd93d;   /* lemon    */
+  --gn-av-4: #9ce84f;   /* grass    */
+  --gn-av-5: #35e3c0;   /* mint     */
+  --gn-av-6: #45c2ff;   /* sky      */
+  --gn-av-7: #a882ff;   /* lavender */
+  --gn-av-8: #ff6fd0;   /* bubblegum*/
+
+  /* --- layout ----------------------------------------------------------- */
+  --gn-max-width:    720px;   /* phone-first content column */
+  --gn-gap:          14px;
+  --gn-bar-h:        56px;
+  --gn-hand-card:    50%;     /* how much of the screen one held GIF takes */
+  --gn-tap:          48px;    /* minimum tap target */
+}
+
+/* The game is deliberately one bold look on every screen — a phone in a dim
+   room and a TV across the room want the same thing. To try a daytime variant,
+   override the handful of tokens below; nothing else needs to change.
+@media (prefers-color-scheme: light) {
+  :root {
+    --gn-bg: #ffe7bd; --gn-bg-2: #fff8ea; --gn-bg-3: #ffd79a;
+    --gn-bg-well: #f2d4a6; --gn-ink: #15122e; --gn-ink-dim: #6a6482;
+  }
+}
+*/
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --gn-flip-ms: 1ms;
+    --gn-pop-ms: 1ms;
+    --gn-slow-ms: 1ms;
+    --gn-tilt-a: 0deg;
+    --gn-tilt-b: 0deg;
+    --gn-tilt-c: 0deg;
+    --gn-fan-a: 0deg;
+    --gn-fan-b: 0deg;
+  }
+}

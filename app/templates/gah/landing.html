@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block body_class %}page-landing{% endblock %}
+
+{% block content %}
+<main class="landing">
+  <header class="landing__head">
+    <span class="landing__emoji" aria-hidden="true">{{ game.emoji }}</span>
+    <h1 class="landing__title">Gifs Against Humanity</h1>
+    <p class="landing__tagline">{{ game.tagline }}</p>
+    <p class="landing__meta">{{ game.players }} · first to 5 points wins</p>
+  </header>
+
+  <div class="landing__actions">
+    <form method="post" action="{{ url_for('gah.new_game') }}">
+      <button class="btn btn--big btn--go" type="submit">🎬 Create a game</button>
+    </form>
+    <p class="landing__or">or join one</p>
+    <form class="joinbox__form" method="post" action="{{ url_for('main.join') }}" autocomplete="off">
+      <input class="codeinput" type="text" name="code" id="code" placeholder="ABCD"
+             maxlength="4" minlength="4" pattern="[A-Za-z]{4}" autocapitalize="characters"
+             spellcheck="false" aria-label="4-letter game code" required>
+      <button class="btn" type="submit">Join</button>
+    </form>
+  </div>
+
+  <section class="howto">
+    <h2 class="howto__title sectiontitle">How it works</h2>
+    <ol class="howto__steps">
+      <li><b>Create a game</b> and read out the 4-letter code. Everyone opens the site and types it in.</li>
+      <li><b>Put a TV in the room</b> (optional) at <code>/gah/CODE/tv</code> — it becomes the shared stage. Phones turn into controllers.</li>
+      <li>One player is the <b>judge</b> each round. They pick a prompt from three.</li>
+      <li>Everyone else answers with the funniest GIF from their hand of 7.</li>
+      <li>The judge flips the cards one at a time, then crowns a winner. First to the target score wins.</li>
+    </ol>
+    <p class="howto__note">
+      The host sets judge rotation, points to win and timers in the lobby before starting.
+    </p>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const input = document.getElementById('code');
+  input.addEventListener('input', () => {
+    input.value = input.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  });
+</script>
+{% endblock %}

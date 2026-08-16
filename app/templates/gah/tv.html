@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block body_class %}page-tv{% endblock %}
+{% block chrome %}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tv.css') }}">
+{% endblock %}
+
+{% block content %}
+<div
+  id="tv"
+  class="tv"
+  data-code="{{ code }}"
+  data-gif-base="{{ url_for('static', filename='gifs/') }}"
+  data-home-url="{{ url_for('main.home') }}">
+
+  <canvas class="tv__confetti" id="confetti" aria-hidden="true"></canvas>
+
+  <aside class="tvside">
+    <div class="tvside__head">
+      <span class="tvside__label">Game code</span>
+      <span class="tvside__code" id="tv-code">{{ code }}</span>
+    </div>
+    <ol class="tvscores" id="tv-scores"></ol>
+    <div class="tvside__foot">
+      <span class="tvside__round" id="tv-round"></span>
+      <span class="tvside__target" id="tv-target"></span>
+    </div>
+  </aside>
+
+  <main class="tvmain" id="tv-main">
+    <section class="tvpanel" id="tv-panel">
+      <h1 class="tvpanel__title">Gifs Against Humanity</h1>
+      <p class="tvpanel__sub" id="tv-boot">Connecting…</p>
+    </section>
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/vendor/socket.io.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/gn-socket.js') }}"></script>
+<script src="{{ url_for('static', filename='js/gah-tv.js') }}"></script>
+{% endblock %}

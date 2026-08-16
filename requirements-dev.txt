@@ -1,0 +1,6 @@
+# Everything needed to develop, test and generate assets.
+-r requirements.txt
+
+pillow>=10.0.0          # scripts/make_placeholder_gifs.py
+pytest>=8.0.0           # tests/
+websocket-client>=1.7.0 # the bot clients in scripts/

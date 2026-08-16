@@ -208,3 +208,6 @@ __marimo__/
 
 
 node_modules/
+# local deployment settings (secrets)
+.env
+!.env.example
