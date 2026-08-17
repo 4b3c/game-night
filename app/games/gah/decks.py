@@ -74,8 +74,8 @@ def load_gifs() -> tuple[dict, ...]:
 def _read_manifest() -> tuple[dict, ...]:
     if not GIF_MANIFEST_PATH.exists():
         raise DeckError(
-            f"{GIF_MANIFEST_PATH} missing -- run `python scripts/scan_gifs.py` (or "
-            f"`python scripts/make_placeholder_gifs.py` for fresh filler)"
+            f"{GIF_MANIFEST_PATH} missing -- run `python scripts/rehydrate_gifs.py` to "
+            f"rebuild the cards from curation/decisions.json"
         )
     raw = json.loads(GIF_MANIFEST_PATH.read_text())
     gifs = raw["gifs"] if isinstance(raw, dict) else raw
@@ -87,16 +87,20 @@ def _read_manifest() -> tuple[dict, ...]:
         if not (GIF_MANIFEST_PATH.parent / g["file"]).is_file():
             missing += 1
             continue
-        out.append(
-            {
-                "id": g["id"],
-                "file": g["file"],
-                "label": g.get("label", g["id"]),
-                # Which modes this card belongs to — a card can be in several. Written by
-                # scripts/curate_gifs.py. `rating` is the older single-tag form.
-                "sets": _sets_of(g),
-            }
-        )
+        entry = {
+            "id": g["id"],
+            "file": g["file"],
+            "label": g.get("label", g["id"]),
+            # Which modes this card belongs to — a card can be in several. Written by
+            # scripts/curate_gifs.py. `rating` is the older single-tag form.
+            "sets": _sets_of(g),
+        }
+        # The GIF's real shape, so a card can reserve the right space before the picture
+        # arrives instead of forcing everything into a box and cropping it. Older
+        # manifests don't have it; the client falls back to 4:3.
+        if g.get("w") and g.get("h"):
+            entry["w"], entry["h"] = int(g["w"]), int(g["h"])
+        out.append(entry)
     if missing:
         print(f"[gah] {missing} gif(s) in the manifest are not on disk — skipping them")
     if len(out) < 16:

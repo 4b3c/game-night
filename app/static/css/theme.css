@@ -25,6 +25,10 @@
   --gn-bg-2:          #1e2a5e;   /* raised background (bars, rails, panels) */
   --gn-bg-3:          #2c3d80;   /* hover / inset / card backs */
   --gn-bg-well:       #0b1130;   /* the darkest wells (behind cards, timers) */
+  /* What sits behind a GIF. Plenty of them have transparent backgrounds and were drawn
+     against white; on the midnight blue well those came out as a blue-tinted mess, so
+     cards get their own mat rather than borrowing the page's. */
+  --gn-gif-mat:       #ffffff;
 
   /* --- surfaces (the "paper" cards and buttons are printed on) ----------- */
   --gn-surface:       #fff8ea;   /* card stock */

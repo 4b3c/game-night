@@ -399,8 +399,15 @@
 
 .tvcard {
   position: relative;
-  width: 100%;
-  aspect-ratio: 4 / 3;
+  /* Sized from its height, not its width: every card is exactly --cap tall and as wide
+     as its own GIF needs, so a row reads like a row of photos instead of everything
+     being cropped square. max-width keeps a very wide one inside its column, and the
+     aspect ratio then trims the height to match. */
+  height: var(--cap);
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: var(--card-ar, 4 / 3);
+  transition: aspect-ratio var(--gn-flip-ms) var(--gn-ease);
   perspective: 1400px;
 }
 .tvcard:nth-child(odd) { rotate: var(--gn-tilt-c); }
@@ -438,8 +445,9 @@
   letter-spacing: .1em;
   transform: rotate(-6deg);
 }
-.tvcard__front { transform: rotateY(180deg); background: var(--gn-bg-well); }
-.tvcard__img { width: 100%; height: 100%; object-fit: cover; }
+.tvcard__front { transform: rotateY(180deg); background: var(--gn-gif-mat); }
+/* `contain` so a manifest without dimensions letterboxes instead of cropping. */
+.tvcard__img { width: 100%; height: 100%; object-fit: contain; }
 
 .tvcard--slot.tvcard--empty { opacity: .35; }
 .tvcard--slot.tvcard--empty .tvcard__back {

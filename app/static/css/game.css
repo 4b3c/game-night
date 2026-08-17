@@ -378,7 +378,10 @@ p.panel__code b, b.panel__code {
   position: relative;
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  /* The GIF's own shape once it's revealed (set by gah-play.js), 4:3 while face down.
+     Both faces are absolutely positioned, so the card itself has to carry the box. */
+  aspect-ratio: var(--card-ar, 4 / 3);
+  transition: aspect-ratio var(--gn-flip-ms) var(--gn-ease);
   padding: 0;
   border: 0;
   background: none;
@@ -426,8 +429,10 @@ button.tcard:active { transform: scale(.98); }
   letter-spacing: .1em;
   transform: rotate(-6deg);
 }
-.tcard__front { transform: rotateY(180deg); background: var(--gn-bg-well); }
-.tcard__img { width: 100%; height: 100%; object-fit: cover; }
+.tcard__front { transform: rotateY(180deg); background: var(--gn-gif-mat); }
+/* `contain`, not `cover`: with the card already at the GIF's ratio these are the same
+   thing, but if a manifest has no dimensions it letterboxes rather than crops. */
+.tcard__img { width: 100%; height: 100%; object-fit: contain; }
 .tcard__caption {
   position: absolute;
   left: 50%;
@@ -510,7 +515,10 @@ button.tcard:active { transform: scale(.98); }
 @keyframes deal { from { transform: translateY(-18px) rotate(-10deg); opacity: 0; } }
 
 .playedgif {
+  display: block;
   width: min(100%, 300px);
+  height: auto;
+  background: var(--gn-gif-mat);
   border: var(--gn-outline-lg) solid var(--gn-outline-color);
   border-radius: var(--gn-radius-sm);
   box-shadow: var(--gn-shadow);
@@ -785,12 +793,14 @@ button.tcard:active { transform: scale(.98); }
 
 .gifcard {
   position: relative;
-  aspect-ratio: 4 / 3;
+  /* No fixed shape. A hand scrolls vertically, so a card is as tall as its GIF is —
+     which is the whole point: forcing 4:3 and cropping to fill cut the top off the
+     tall ones and the sides off the wide ones. Width is the only thing fixed. */
   padding: 0;
   overflow: hidden;
   border: var(--gn-outline) solid var(--gn-outline-color);
   border-radius: var(--gn-radius-sm);
-  background: var(--gn-bg-well);
+  background: var(--gn-gif-mat);
   box-shadow: var(--gn-shadow);
   cursor: pointer;
   transition:
@@ -800,7 +810,7 @@ button.tcard:active { transform: scale(.98); }
 /* fan them out a touch so it reads as a hand of cards, not a filmstrip */
 .hand .gifcard:nth-child(odd) { transform: rotate(var(--gn-fan-a)); }
 .hand .gifcard:nth-child(even) { transform: rotate(var(--gn-fan-b)) translateY(4px); }
-.gifcard__img { width: 100%; height: 100%; object-fit: cover; }
+.gifcard__img { display: block; width: 100%; height: auto; }
 .gifcard__tick {
   position: absolute;
   top: 7px;

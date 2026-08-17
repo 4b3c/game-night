@@ -213,8 +213,12 @@
           img.dataset.gif = c.gif.id;
           img.src = gifUrl(c.gif);
         }
+        // Take the GIF's own shape rather than cropping it into a 4:3 slot.
+        if (c.gif.w && c.gif.h) node.style.setProperty('--card-ar', c.gif.w + ' / ' + c.gif.h);
+        else node.style.removeProperty('--card-ar');
       } else if (img) {
         img.remove();
+        node.style.removeProperty('--card-ar');
       }
       const author = node.querySelector('.tvcard__author');
       author.innerHTML = c.author ? avatarHtml(c.author) + '<b>' + esc(c.author.nickname) + '</b>' : '';

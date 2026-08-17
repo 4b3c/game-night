@@ -116,6 +116,18 @@
     return GIF_BASE + gif.file;
   }
 
+  /**
+   * Give an element the GIF's real aspect ratio.
+   *
+   * Only cards whose two faces are stacked on top of each other need this — they have
+   * to know their shape before the picture loads. Manifests written before GIFs were
+   * measured have no w/h, and those fall back to the CSS default.
+   */
+  function setRatio(node, gif) {
+    if (gif && gif.w && gif.h) node.style.setProperty('--card-ar', gif.w + ' / ' + gif.h);
+    else node.style.removeProperty('--card-ar');
+  }
+
   function esc(v) {
     return GN.esc(v);
   }
@@ -289,8 +301,12 @@
           img.dataset.gif = c.gif.id;
           img.src = gifUrl(c.gif);
         }
+        // The flip needs a box both faces can sit in, so the card takes the GIF's own
+        // shape the moment it's revealed rather than cropping it into a 4:3 slot.
+        setRatio(node, c.gif);
       } else if (img) {
         img.remove(); // face down again — never leave a stale picture behind the back
+        node.style.removeProperty('--card-ar');
       }
       const caption = node.querySelector('.tcard__caption');
       caption.innerHTML = c.author
