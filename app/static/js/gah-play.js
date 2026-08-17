@@ -121,11 +121,42 @@
    *
    * Only cards whose two faces are stacked on top of each other need this — they have
    * to know their shape before the picture loads. Manifests written before GIFs were
-   * measured have no w/h, and those fall back to the CSS default.
+   * measured have no w/h, and those fall back to the CSS default until the picture
+   * arrives and measureFrom() corrects it.
+   *
+   * Two custom properties for one number: `--card-ar` is the ratio `aspect-ratio` wants,
+   * and `--card-arn` is the same thing as a plain number, which is the only form calc()
+   * can multiply a height by.
    */
-  function setRatio(node, gif) {
-    if (gif && gif.w && gif.h) node.style.setProperty('--card-ar', gif.w + ' / ' + gif.h);
-    else node.style.removeProperty('--card-ar');
+  function setRatio(node, w, h) {
+    if (w && h) {
+      node.style.setProperty('--card-ar', w + ' / ' + h);
+      node.style.setProperty('--card-arn', String(w / h));
+    } else {
+      clearRatio(node);
+    }
+  }
+
+  function clearRatio(node) {
+    node.style.removeProperty('--card-ar');
+    node.style.removeProperty('--card-arn');
+  }
+
+  /**
+   * Take the shape from the picture once it has loaded.
+   *
+   * The manifest is the fast path — it lets the card reserve the right space before a
+   * byte of GIF arrives — but it is written by a tool that can only measure when Pillow
+   * is installed, so it is allowed to be wrong or absent. The loaded image never is.
+   * Without this a card falls back to 4:3 and the white mat shows as bands down the
+   * sides of anything that isn't.
+   */
+  function measureFrom(img, node) {
+    const apply = function () {
+      if (img.naturalWidth && img.naturalHeight) setRatio(node, img.naturalWidth, img.naturalHeight);
+    };
+    if (img.complete) apply();
+    img.addEventListener('load', apply);
   }
 
   function esc(v) {
@@ -296,6 +327,7 @@
           img.className = 'tcard__img';
           img.alt = 'Submitted GIF';
           front.appendChild(img);
+          measureFrom(img, node);
         }
         if (img.dataset.gif !== c.gif.id) {
           img.dataset.gif = c.gif.id;
@@ -303,10 +335,10 @@
         }
         // The flip needs a box both faces can sit in, so the card takes the GIF's own
         // shape the moment it's revealed rather than cropping it into a 4:3 slot.
-        setRatio(node, c.gif);
+        setRatio(node, c.gif && c.gif.w, c.gif && c.gif.h);
       } else if (img) {
         img.remove(); // face down again — never leave a stale picture behind the back
-        node.style.removeProperty('--card-ar');
+        clearRatio(node);
       }
       const caption = node.querySelector('.tcard__caption');
       caption.innerHTML = c.author

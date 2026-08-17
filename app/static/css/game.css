@@ -357,40 +357,45 @@ p.panel__code b, b.panel__code {
 }
 .promptcard:active { transform: scale(.97) rotate(0deg); box-shadow: var(--gn-shadow-press); }
 
-/* --- the table of submitted cards --------------------------------------- */
+/* --- the table of submitted cards ---------------------------------------
+   One card per row on a phone. Three answers across a 390px screen left each one about
+   110px wide — too small to judge a joke by, which is the entire task. They stack
+   instead, each a fixed share of the screen at its own true shape, and you scroll. The
+   grid comes back on a screen wide enough for it, down at the 620px breakpoint. */
 .table {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 26px 12px;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 30px 12px;
   width: 100%;
 }
-.table[data-count="1"] { grid-template-columns: 1fr; }
-.table[data-count="3"] { grid-template-columns: repeat(3, 1fr); }
-.table[data-count="5"], .table[data-count="6"], .table[data-count="7"] {
-  grid-template-columns: repeat(3, 1fr);
-}
-/* Once the round is decided the table is a recap, not a control — shrink it so the
-   result panel stays the thing you're looking at. */
-.stage:has(.panel--result) .table,
-.stage:has(.panel--over) .table { grid-template-columns: repeat(3, 1fr); gap: 22px 10px; }
 
 .tcard {
   position: relative;
   display: block;
-  width: 100%;
+  /* Wide enough to read across the room, capped by height so one very tall GIF can't
+     take two screens on its own. Both are needed: the width alone would do that, and
+     the height alone would leave a portrait card hugging the left edge. */
+  width: min(80vw, calc(74vh * var(--card-arn, 1.3333)));
   /* The GIF's own shape once it's revealed (set by gah-play.js), 4:3 while face down.
-     Both faces are absolutely positioned, so the card itself has to carry the box. */
+     Both faces are absolutely positioned, so the card itself has to carry the box —
+     and carrying the true shape is what stops the white mat showing as bands. */
   aspect-ratio: var(--card-ar, 4 / 3);
-  transition: aspect-ratio var(--gn-flip-ms) var(--gn-ease);
   padding: 0;
   border: 0;
   background: none;
   perspective: 900px;
   cursor: pointer;
-  transition: transform var(--gn-pop-ms) var(--gn-ease);
+  transition:
+    transform var(--gn-pop-ms) var(--gn-ease),
+    aspect-ratio var(--gn-flip-ms) var(--gn-ease);
 }
-.tcard:nth-child(odd) { rotate: var(--gn-tilt-c); }
-.tcard:nth-child(even) { rotate: var(--gn-tilt-b); }
+/* No tilt while they're stacked: a card this size only has to rotate a degree to push
+   the page sideways, and a column of straight cards is the cleaner read anyway. */
+@media (min-width: 620px) {
+  .tcard:nth-child(odd) { rotate: var(--gn-tilt-c); }
+  .tcard:nth-child(even) { rotate: var(--gn-tilt-b); }
+}
 button.tcard:hover { transform: translateY(-4px) scale(1.02); }
 button.tcard:active { transform: scale(.98); }
 .tcard__inner {
@@ -914,10 +919,19 @@ button.tcard:active { transform: scale(.98); }
 }
 @keyframes bar-up { from { transform: translateY(18px); opacity: 0; } }
 
-/* --- bigger screens: give the hand more room --------------------------- */
+/* --- bigger screens: give the hand more room ---------------------------
+   And put the table back in a grid: there's room for several answers side by side here,
+   which is the faster read when they all fit anyway. */
 @media (min-width: 620px) {
   .hand { grid-template-columns: repeat(2, 1fr); }
-  .table { grid-template-columns: repeat(3, 1fr); }
+  .table { grid-template-columns: repeat(3, 1fr); gap: 26px 12px; }
+  .table[data-count="1"] { grid-template-columns: 1fr; }
+  .table[data-count="2"], .table[data-count="4"] { grid-template-columns: repeat(2, 1fr); }
+  /* Once the round is decided the table is a recap, not a control — shrink it so the
+     result panel stays the thing you're looking at. */
+  .stage:has(.panel--result) .table,
+  .stage:has(.panel--over) .table { grid-template-columns: repeat(3, 1fr); gap: 22px 10px; }
+  .tcard { width: 100%; }
   .panel { padding: 30px 26px 26px; }
   .panel__title { font-size: 2rem; }
   .panel .prompt { font-size: 1.4rem; }
