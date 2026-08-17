@@ -1,6 +1,17 @@
 {
   "version": 1,
   "cards": {
+    "giphy:0CtFN4lxf5t8Bzi0ry": {
+      "added": "2026-08-17T19:29:29+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "tom-holland-laughing-0CtFN4lx.gif",
+      "title": "Tom Holland Laughing GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/phone-lmao-crine-0CtFN4lxf5t8Bzi0ry"
+    },
     "giphy:1KHKKuApHyWFjee60f": {
       "file": "israel-acc-1KHKKuAp.gif",
       "title": "Israel Acc GIF",
@@ -13,6 +24,28 @@
       "wins": 0,
       "w": 480,
       "h": 356
+    },
+    "giphy:1SfxXOJ0Q2Xni": {
+      "added": "2026-08-17T19:28:24+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "breaking-bad-1SfxXOJ0.gif",
+      "title": "Breaking Bad GIF",
+      "sets": [
+        "adult"
+      ],
+      "page": "https://giphy.com/gifs/1SfxXOJ0Q2Xni"
+    },
+    "giphy:1doCHphvQUgvijb2jX": {
+      "added": "2026-08-17T19:25:38+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "tung-tung-1doCHphv.gif",
+      "title": "Tung Tung GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/sahur-tung-1doCHphvQUgvijb2jX"
     },
     "giphy:1mUPz4u0RZC1t8dwoh": {
       "file": "lego-city-ugh-1mUPz4u0.gif",
@@ -27,18 +60,82 @@
       "w": 575,
       "h": 542
     },
-    "giphy:3o6UBgDNiVZHmypHuU": {
-      "file": "bored-over-it-3o6UBgDN.gif",
-      "title": "Bored Over It GIF",
+    "giphy:1tHqMrQJRiZLQyWpze": {
+      "added": "2026-08-17T19:28:01+00:00",
+      "uses": 1,
+      "wins": 0,
+      "file": "interrupt-lebron-james-1tHqMrQJ.gif",
+      "title": "Interrupt Lebron James GIF",
       "sets": [
         "normal"
       ],
-      "page": "https://giphy.com/gifs/ricky-gervais-kill-me-golden-globes-2016-3o6UBgDNiVZHmypHuU",
-      "added": "2026-08-17T00:00:00+00:00",
+      "page": "https://giphy.com/gifs/lebron-james-promyto-promytox-1tHqMrQJRiZLQyWpze"
+    },
+    "giphy:26FmS0Hh04k0zC9R6": {
+      "added": "2026-08-17T22:09:11+00:00",
       "uses": 0,
       "wins": 0,
-      "w": 388,
-      "h": 218
+      "file": "spanish-omg-by-lil-dicky-26FmS0Hh.gif",
+      "title": "Spanish Omg GIF by Lil Dicky",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/lildicky-lil-dicky-26FmS0Hh04k0zC9R6"
+    },
+    "giphy:3bznFj6OB5381BEjDu": {
+      "added": "2026-08-17T19:30:01+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "tom-holland-avengers-by-twitter-3bznFj6O.gif",
+      "title": "Tom Holland Avengers GIF by Twitter",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/twitter-3bznFj6OB5381BEjDu"
+    },
+    "giphy:3o7qDLkrKr034Z3hQI": {
+      "added": "2026-08-17T22:11:12+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "correspondents-dinner-mic-drop-3o7qDLkr.gif",
+      "title": "Correspondents Dinner Mic Drop GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/obama-mic-drop-out-3o7qDLkrKr034Z3hQI"
+    },
+    "giphy:3oEjHCWdU7F4hkcudy": {
+      "added": "2026-08-17T22:14:50+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "aaron-paul-he-cant-keep-getting-away-wit-3oEjHCWd.gif",
+      "title": "Aaron Paul He Cant Keep Getting Away With This GIF by Breaking Bad",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/aaron-paul-jesse-pinkman-he-cant-keep-getting-away-with-this-3oEjHCWdU7F4hkcudy"
+    },
+    "giphy:3ohjUOUjEK1TXCQRva": {
+      "added": "2026-08-17T22:04:50+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "remembering-never-forget-3ohjUOUj.gif",
+      "title": "Remembering Never Forget GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/911-wtc-world-trade-center-3ohjUOUjEK1TXCQRva"
+    },
+    "giphy:40dEau6bZRO3S": {
+      "added": "2026-08-17T19:28:52+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "breaking-bad-trailer-40dEau6b.gif",
+      "title": "Breaking Bad Trailer GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/trailer-better-call-saul-40dEau6bZRO3S"
     },
     "giphy:4H52NOaFk9oMlxdU0D": {
       "file": "spongebob-patrick-4H52NOaF.gif",
@@ -48,7 +145,7 @@
       ],
       "page": "https://giphy.com/gifs/how-bro-felt-after-that-delete-feelings-feel-4H52NOaFk9oMlxdU0D",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
+      "uses": 1,
       "wins": 0,
       "w": 480,
       "h": 434
@@ -66,11 +163,33 @@
       "w": 267,
       "h": 200
     },
+    "giphy:65VBy9Ccvyww9or9IR": {
+      "added": "2026-08-17T22:05:18+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "fortnite-65VBy9Cc.gif",
+      "title": "fortnite GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/fortnite-65VBy9Ccvyww9or9IR"
+    },
+    "giphy:6OnrVwUR8oGiCfiIjw": {
+      "added": "2026-08-17T19:23:53+00:00",
+      "uses": 1,
+      "wins": 0,
+      "file": "satan-watching-6OnrVwUR.gif",
+      "title": "Satan Watching GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/rgull1t-6OnrVwUR8oGiCfiIjw"
+    },
     "giphy:6a99Ntz2yUiaMSUQkd": {
       "file": "married-at-first-sight-reaction-by-lifet-6a99Ntz2.gif",
       "title": "Married At First Sight Reaction GIF by Lifetime",
       "sets": [
-        "normal"
+        "millennial"
       ],
       "page": "https://giphy.com/gifs/lifetimetv-mafs-married-at-first-sight-lifetime-6a99Ntz2yUiaMSUQkd",
       "added": "2026-08-17T00:00:00+00:00",
@@ -78,6 +197,28 @@
       "wins": 0,
       "w": 200,
       "h": 200
+    },
+    "giphy:6gkpW1rFQnhJbyo4KT": {
+      "added": "2026-08-17T19:28:00+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "hi-6gkpW1rF.gif",
+      "title": "Hi GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/hi-will-it-work-3rpu-6gkpW1rFQnhJbyo4KT"
+    },
+    "giphy:6jM8Cxna4bmxyrXayu": {
+      "added": "2026-08-17T19:24:16+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "shocked-6jM8Cxna.gif",
+      "title": "Shocked GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/meme-shocked-sonic-6jM8Cxna4bmxyrXayu"
     },
     "giphy:7O2czWhw4adODbfbJJ": {
       "file": "anger-no-by-holly-logan-7O2czWhw.gif",
@@ -105,44 +246,82 @@
       "w": 480,
       "h": 270
     },
-    "giphy:8RvL5KGDdP5i7Ns4gK": {
-      "file": "meme-dogs-by-shibetoshi-nakamoto-8RvL5KGD.gif",
-      "title": "Meme Dogs GIF by Shibetoshi Nakamoto",
+    "giphy:8GqAxxfqOOZ4YcxgTi": {
+      "added": "2026-08-17T22:05:31+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "baseball-triple-t-8GqAxxfq.gif",
+      "title": "Baseball Triple T GIF",
       "sets": [
         "normal"
       ],
-      "page": "https://giphy.com/gifs/8RvL5KGDdP5i7Ns4gK",
-      "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
-      "wins": 0,
-      "w": 417,
-      "h": 236
+      "page": "https://giphy.com/gifs/fortnite-tung-sahur-triple-t-8GqAxxfqOOZ4YcxgTi"
     },
-    "giphy:DPlOoiVBTVto6RkUWg": {
-      "file": "happy-americas-got-talent-by-top-talent-DPlOoiVB.gif",
-      "title": "Happy Americas Got Talent GIF by Top Talent",
+    "giphy:8LE0DMg6TkvDtUdSAR": {
+      "added": "2026-08-17T19:24:46+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "stressed-speed-8LE0DMg6.gif",
+      "title": "Stressed Speed GIF",
       "sets": [
         "normal"
       ],
-      "page": "https://giphy.com/gifs/toptalent-agt-americas-got-talent-DPlOoiVBTVto6RkUWg",
-      "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
-      "wins": 0,
-      "w": 480,
-      "h": 480
+      "page": "https://giphy.com/gifs/air-blow-bruhh-8LE0DMg6TkvDtUdSAR"
     },
-    "giphy:EQITBw3InhwiduaMUz": {
-      "file": "911-on-fox-by-fox-tv-EQITBw3I.gif",
-      "title": "911 On Fox GIF by FOX TV",
+    "giphy:BY5tPZNL68V29cVfuz": {
+      "added": "2026-08-17T22:07:48+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "sad-spongebob-squarepants-BY5tPZNL.gif",
+      "title": "Sad Spongebob Squarepants GIF",
       "sets": [
         "normal"
       ],
-      "page": "https://giphy.com/gifs/foxtv-fox-911-on-EQITBw3InhwiduaMUz",
-      "added": "2026-08-17T00:00:00+00:00",
+      "page": "https://giphy.com/gifs/how-fo-do-we-tell-him-BY5tPZNL68V29cVfuz"
+    },
+    "giphy:CZXNQBkiTPRRmV59Ne": {
+      "added": "2026-08-17T22:12:17+00:00",
       "uses": 0,
       "wins": 0,
-      "w": 480,
-      "h": 270
+      "file": "sad-mood-CZXNQBki.gif",
+      "title": "Sad Mood GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/mood-crying-thenseven-CZXNQBkiTPRRmV59Ne"
+    },
+    "giphy:D63HGAzG15LQrjBPRE": {
+      "added": "2026-08-17T19:24:41+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "show-ok-D63HGAzG.gif",
+      "title": "Show Ok GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/yeah-speed-ishowspeed-D63HGAzG15LQrjBPRE"
+    },
+    "giphy:DeGgSG02trYFDmv2b3": {
+      "added": "2026-08-17T22:13:56+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "tuff-DeGgSG02.gif",
+      "title": "Tuff GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/tuff-not-baby-ai-DeGgSG02trYFDmv2b3"
+    },
+    "giphy:Fc6PCwWfjUj1PHEkmq": {
+      "added": "2026-08-17T22:16:27+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "king-speed-Fc6PCwWf.gif",
+      "title": "King Speed GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/speed-back-impressive-Fc6PCwWfjUj1PHEkmq"
     },
     "giphy:GP83CbG7xfAybFFXyu": {
       "file": "sad-spongebob-GP83CbG7.gif",
@@ -161,9 +340,7 @@
       "file": "when-the-IXHeHryc.gif",
       "title": "",
       "sets": [
-        "normal",
-        "adult",
-        "millennial"
+        "normal"
       ],
       "page": "https://giphy.com/gifs/skeleton-sword-shield-IXHeHrycyath5ZBSKK",
       "added": "2026-08-17T00:00:00+00:00",
@@ -185,6 +362,28 @@
       "w": 356,
       "h": 200
     },
+    "giphy:IjkhWvkmN32mAsKKa6": {
+      "added": "2026-08-17T19:29:30+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "tom-holland-IjkhWvkm.gif",
+      "title": "Tom Holland GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/cooked-graggletwo-tom-holland-shocked-IjkhWvkmN32mAsKKa6"
+    },
+    "giphy:JqDztiqkVo3PmPcmyJ": {
+      "added": "2026-08-17T19:21:51+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "patrick-JqDztiqk.gif",
+      "title": "Patrick GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/crazy-sunger-bob-snger-JqDztiqkVo3PmPcmyJ"
+    },
     "giphy:KGGYlGZYJNqtJb8r22": {
       "file": "mood-flexing-by-lil-mayo-KGGYlGZY.gif",
       "title": "Mood Flexing GIF by Lil Mayo",
@@ -193,7 +392,7 @@
       ],
       "page": "https://giphy.com/gifs/lilmayo-alien-selfie-extraterrestrial-KGGYlGZYJNqtJb8r22",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
+      "uses": 1,
       "wins": 0,
       "w": 240,
       "h": 300
@@ -211,18 +410,16 @@
       "w": 288,
       "h": 200
     },
-    "giphy:LEkV0EyhtA23UMxGDl": {
-      "file": "charlie-kirk-LEkV0Eyh.gif",
-      "title": "Charlie Kirk GIF",
+    "giphy:NDzVwpclOqiprMcfLZ": {
+      "added": "2026-08-17T22:08:15+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "iron-man-stare-NDzVwpcl.gif",
+      "title": "Iron Man Stare GIF",
       "sets": [
         "normal"
       ],
-      "page": "https://giphy.com/gifs/sidhu-moosewala-smw-sussyjatt-LEkV0EyhtA23UMxGDl",
-      "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
-      "wins": 0,
-      "w": 480,
-      "h": 480
+      "page": "https://giphy.com/gifs/avengers-robert-downey-jr-tony-stark-stare-NDzVwpclOqiprMcfLZ"
     },
     "giphy:NNbmIjdClGwPC": {
       "file": "bow-down-big-time-rush-NNbmIjdC.gif",
@@ -236,6 +433,17 @@
       "wins": 0,
       "w": 465,
       "h": 200
+    },
+    "giphy:NR7mbKbnhnwAQ4Tsjq": {
+      "added": "2026-08-17T19:23:16+00:00",
+      "uses": 1,
+      "wins": 0,
+      "file": "tony-stark-jarvis-NR7mbKbn.gif",
+      "title": "Tony Stark Jarvis GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/tony-stark-jarvis-cortisol-NR7mbKbnhnwAQ4Tsjq"
     },
     "giphy:NXeA1Brbc5bRSnDvS6": {
       "file": "navi-jl-by-blast-NXeA1Brb.gif",
@@ -263,6 +471,17 @@
       "w": 356,
       "h": 200
     },
+    "giphy:OCfQJMN6nI343tnoq9": {
+      "added": "2026-08-17T22:08:41+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "iron-man-jarvis-OCfQJMN6.gif",
+      "title": "Iron Man Jarvis GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/iron-man-shad10-this-aint-tuff-OCfQJMN6nI343tnoq9"
+    },
     "giphy:OcKa0zdwVimJ2": {
       "file": "kinky-world-war-2-OcKa0zdw.gif",
       "title": "kinky world war 2 GIF",
@@ -275,6 +494,28 @@
       "wins": 0,
       "w": 400,
       "h": 225
+    },
+    "giphy:Ohd1JXtIeGnEA": {
+      "added": "2026-08-17T22:15:47+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "by-giphy-qa-Ohd1JXtI.gif",
+      "title": "GIF by Giphy QA",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/giphyqa-Ohd1JXtIeGnEA"
+    },
+    "giphy:OtpL9XYDasnKABadOq": {
+      "added": "2026-08-17T19:27:57+00:00",
+      "uses": 1,
+      "wins": 0,
+      "file": "hi-mommy-OtpL9XYD.gif",
+      "title": "Hi Mommy GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/graggletwo-will-it-work-hi-mommy-OtpL9XYDasnKABadOq"
     },
     "giphy:PGy6B6TqbBKQHmPxKm": {
       "file": "cringe-glow-up-PGy6B6Tq.gif",
@@ -297,24 +538,21 @@
       ],
       "page": "https://giphy.com/gifs/us-israel-usa-PYoDRsfjxgsMLaRhkU",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
-      "wins": 0,
+      "uses": 1,
+      "wins": 1,
       "w": 480,
       "h": 358
     },
-    "giphy:QIDAVcyucrnVK": {
-      "file": "cockroach-QIDAVcyu.gif",
-      "title": "cockroach GIF",
-      "sets": [
-        "normal",
-        "millennial"
-      ],
-      "page": "https://giphy.com/gifs/cockroach-QIDAVcyucrnVK",
-      "added": "2026-08-17T00:00:00+00:00",
+    "giphy:QtkaYLHzBgh0WUCgjC": {
+      "added": "2026-08-17T22:07:49+00:00",
       "uses": 0,
       "wins": 0,
-      "w": 380,
-      "h": 289
+      "file": "pack-it-up-its-over-QtkaYLHz.gif",
+      "title": "Pack It Up Its Over GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/brother-sonion-brochacho-QtkaYLHzBgh0WUCgjC"
     },
     "giphy:QumZ46VFLWKJl4L3rl": {
       "file": "drip-pee-by-switzerfilm-QumZ46VF.gif",
@@ -324,8 +562,8 @@
       ],
       "page": "https://giphy.com/gifs/Switzerfilm-wet-pee-peepants-QumZ46VFLWKJl4L3rl",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
-      "wins": 0,
+      "uses": 1,
+      "wins": 1,
       "w": 250,
       "h": 200
     },
@@ -337,10 +575,32 @@
       ],
       "page": "https://giphy.com/gifs/RespectiveCollective-scuba-charliekirk-innit-QzEVqg6UHEPKcskBYS",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
-      "wins": 0,
+      "uses": 1,
+      "wins": 1,
       "w": 160,
       "h": 200
+    },
+    "giphy:R1FQWuHa9IcxNrvFQS": {
+      "added": "2026-08-17T22:08:17+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "screaming-iron-man-R1FQWuHa.gif",
+      "title": "Screaming Iron Man GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/rdj-robert-downey-screaming-R1FQWuHa9IcxNrvFQS"
+    },
+    "giphy:RUYCx0kgKJ6wiZ9LGs": {
+      "added": "2026-08-17T19:24:49+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "speed-RUYCx0kg.gif",
+      "title": "Speed GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/reaction-ishowspeed-w-speed-RUYCx0kgKJ6wiZ9LGs"
     },
     "giphy:SHhDIe2Mmt5HwlWZdU": {
       "file": "animation-drawing-SHhDIe2M.gif",
@@ -394,25 +654,44 @@
       "w": 356,
       "h": 200
     },
-    "giphy:VCn1VA3URcSVlK45Hl": {
-      "file": "lol-by-line-friends-VCn1VA3U.gif",
-      "title": "\ub77c\uc778\ud504\ub80c\uc988 Lol GIF by LINE FRIENDS",
+    "giphy:T6Jha6mQnL2uVXBezp": {
+      "added": "2026-08-17T22:10:27+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "sunset-son-T6Jha6mQ.gif",
+      "title": "Sunset Son GIF",
       "sets": [
         "normal"
       ],
-      "page": "https://giphy.com/gifs/LINEFRIENDS-linefriends-minini-minini24-VCn1VA3URcSVlK45Hl",
-      "added": "2026-08-17T00:00:00+00:00",
+      "page": "https://giphy.com/gifs/sonbrero-jatiyo-chromoson-T6Jha6mQnL2uVXBezp"
+    },
+    "giphy:TstLdEjBd1KaYVuOFs": {
+      "added": "2026-08-17T19:31:45+00:00",
       "uses": 0,
       "wins": 0,
-      "w": 200,
-      "h": 200
+      "file": "john-pork-by-strapped-TstLdEjB.gif",
+      "title": "John Pork GIF by STRAPPED!",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/STRAPPEDUS-john-pork-johnpork-lore-TstLdEjBd1KaYVuOFs"
+    },
+    "giphy:UbzFZacBqWjPG": {
+      "added": "2026-08-17T22:15:45+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "fight-character-UbzFZacB.gif",
+      "title": "fight character GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/mrw-overwatch-mountain-UbzFZacBqWjPG"
     },
     "giphy:VXuKUKAgUgRlm": {
       "file": "maui-youre-welcome-VXuKUKAg.gif",
       "title": "maui youre welcome GIF",
       "sets": [
-        "normal",
-        "millennial"
+        "normal"
       ],
       "page": "https://giphy.com/gifs/maui-youre-welcome-VXuKUKAgUgRlm",
       "added": "2026-08-17T00:00:00+00:00",
@@ -420,19 +699,6 @@
       "wins": 0,
       "w": 390,
       "h": 249
-    },
-    "giphy:WHgQZgSeETlNy3410E": {
-      "file": "goku-meme-WHgQZgSe.gif",
-      "title": "Goku Meme GIF",
-      "sets": [
-        "normal"
-      ],
-      "page": "https://giphy.com/gifs/goku-meme-negativity-WHgQZgSeETlNy3410E",
-      "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
-      "wins": 0,
-      "w": 480,
-      "h": 270
     },
     "giphy:WVl8CiNqqsAr4ggWZT": {
       "file": "united-kingdom-uk-WVl8CiNq.gif",
@@ -447,6 +713,17 @@
       "w": 480,
       "h": 362
     },
+    "giphy:Xa023VZ8wfA5C3WF9y": {
+      "added": "2026-08-17T19:21:53+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "patrick-star-spongebob-by-respective-Xa023VZ8.gif",
+      "title": "Patrick Star Spongebob GIF by Respective",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/RespectiveCollective-window-jealous-left-out-Xa023VZ8wfA5C3WF9y"
+    },
     "giphy:XhjIRXAApI5jy": {
       "file": "shrek-XhjIRXAA.gif",
       "title": "shrek GIF",
@@ -455,8 +732,8 @@
       ],
       "page": "https://giphy.com/gifs/shrek-XhjIRXAApI5jy",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
-      "wins": 0,
+      "uses": 1,
+      "wins": 1,
       "w": 400,
       "h": 224
     },
@@ -473,18 +750,60 @@
       "w": 455,
       "h": 200
     },
-    "giphy:ZlJETaiooNk89O3KEv": {
-      "file": "fashion-dripping-by-south-park-ZlJETaio.gif",
-      "title": "Fashion Dripping GIF by South Park",
+    "giphy:YLaLwQ2HE5OuuvAAfz": {
+      "added": "2026-08-17T22:04:35+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "larper-pretend-YLaLwQ2H.gif",
+      "title": "Larper Pretend GIF",
       "sets": [
         "normal"
       ],
-      "page": "https://giphy.com/gifs/southpark-south-park-s26e2-ZlJETaiooNk89O3KEv",
-      "added": "2026-08-17T00:00:00+00:00",
+      "page": "https://giphy.com/gifs/larper-larps-slimeallyourfriends-YLaLwQ2HE5OuuvAAfz"
+    },
+    "giphy:YlRpYzrkHbtSYDAlaE": {
+      "added": "2026-08-17T19:26:54+00:00",
       "uses": 0,
       "wins": 0,
-      "w": 574,
-      "h": 316
+      "file": "happy-amazon-by-the-boys-YlRpYzrk.gif",
+      "title": "Happy Amazon GIF by The Boys",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/TheBoysTV-the-boys-theboys-theboystv-YlRpYzrkHbtSYDAlaE"
+    },
+    "giphy:a8DfVAblirrOg": {
+      "added": "2026-08-17T19:28:37+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "breaking-bad-oops-a8DfVAbl.gif",
+      "title": "breaking bad oops GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/television-breaking-bad-serious-a8DfVAblirrOg"
+    },
+    "giphy:abhMNHCMnbhV7Ad0Ij": {
+      "added": "2026-08-17T22:09:55+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "computer-abhMNHCM.gif",
+      "title": "",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/assustado-emoji-scared-abhMNHCMnbhV7Ad0Ij"
+    },
+    "giphy:bPCwGUF2sKjyE": {
+      "added": "2026-08-17T22:10:05+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "computer-bPCwGUF2.gif",
+      "title": "computer GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/computer-reddit-bPCwGUF2sKjyE"
     },
     "giphy:bnaFrAVRxbXKKOwIco": {
       "file": "work-kicking-feet-by-respective-bnaFrAVR.gif",
@@ -498,6 +817,17 @@
       "wins": 0,
       "w": 200,
       "h": 200
+    },
+    "giphy:cWuCpYskQfi34aGiJQ": {
+      "added": "2026-08-17T19:26:50+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "the-boys-blow-cWuCpYsk.gif",
+      "title": "The Boys Blow GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/homelander-wectie-wectiee-cWuCpYskQfi34aGiJQ"
     },
     "giphy:d3mlE7uhX8KFgEmY": {
       "file": "think-about-it-by-identity-d3mlE7uh.gif",
@@ -537,6 +867,28 @@
       "wins": 0,
       "w": 400,
       "h": 400
+    },
+    "giphy:e7CD41ekE5ZUSgTnkn": {
+      "added": "2026-08-17T22:13:45+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "baby-e7CD41ek.gif",
+      "title": "Baby GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/baby-memes-tuff-e7CD41ekE5ZUSgTnkn"
+    },
+    "giphy:eCobiFJ0vnQwmKmhPh": {
+      "added": "2026-08-17T19:23:09+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "gym-eCobiFJ0.gif",
+      "title": "Gym GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/gym-cortisol-spike-low-test-eCobiFJ0vnQwmKmhPh"
     },
     "giphy:eGmKeueVnk31yCRQW5": {
       "file": "harry-potter-wtf-by-sky-eGmKeueV.gif",
@@ -590,6 +942,17 @@
       "w": 356,
       "h": 200
     },
+    "giphy:iPKYjYludth5m26GQ2": {
+      "added": "2026-08-17T19:29:32+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "watching-spider-man-iPKYjYlu.gif",
+      "title": "Watching Spider-Man GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/reaction-tiktok-my-honest-iPKYjYludth5m26GQ2"
+    },
     "giphy:iWxfULL4EpNCFFJ51e": {
       "file": "hand-it-over-by-joomboos-iWxfULL4.gif",
       "title": "Hand It Over GIF by JoomBoos",
@@ -642,6 +1005,17 @@
       "w": 480,
       "h": 259
     },
+    "giphy:kBwfBzLik1veX0ElHm": {
+      "added": "2026-08-17T22:08:25+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "iron-man-kBwfBzLi.gif",
+      "title": "Iron Man GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/iron-man-graggletwo-tony-stark-more-alcohol-kBwfBzLik1veX0ElHm"
+    },
     "giphy:kMKKrEWqkk3MoX5vdE": {
       "file": "use-your-brain-perfect-cell-kMKKrEWq.gif",
       "title": "Use Your Brain Perfect Cell GIF",
@@ -654,6 +1028,17 @@
       "wins": 0,
       "w": 270,
       "h": 200
+    },
+    "giphy:kYJc54Soy1kBy": {
+      "added": "2026-08-17T22:16:12+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "star-wars-kYJc54So.gif",
+      "title": "star wars GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/star-skywalker-sith-kYJc54Soy1kBy"
     },
     "giphy:kaISveoq1qtzW6FXxU": {
       "file": "bored-sleep-kaISveoq.gif",
@@ -689,7 +1074,7 @@
       ],
       "page": "https://giphy.com/gifs/starwars-season-2-star-wars-l1KsQWgOfw7RuItVu",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
+      "uses": 1,
       "wins": 0,
       "w": 480,
       "h": 206
@@ -702,10 +1087,21 @@
       ],
       "page": "https://giphy.com/gifs/nipples-violet-chachki-show-us-your-lNFEt2aXfViv5Rw9Ki",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
+      "uses": 1,
       "wins": 0,
       "w": 480,
       "h": 268
+    },
+    "giphy:n6o5muKaBkYqP0eTUC": {
+      "added": "2026-08-17T22:15:22+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "monkey-n6o5muKa.gif",
+      "title": "Monkey GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/reaction-monkey-neuron-activation-n6o5muKaBkYqP0eTUC"
     },
     "giphy:ocr5HpX7jyoawhCESK": {
       "file": "game-night-regret-by-mortifiied-ocr5HpX7.gif",
@@ -720,6 +1116,28 @@
       "w": 267,
       "h": 200
     },
+    "giphy:pGVrRLHRzoRcQ": {
+      "added": "2026-08-17T19:30:13+00:00",
+      "uses": 1,
+      "wins": 0,
+      "file": "iron-man-marvel-pGVrRLHR.gif",
+      "title": "iron man marvel GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/robert-downey-jr-marvel-iron-man-pGVrRLHRzoRcQ"
+    },
+    "giphy:pLFS3LLE1cIfK7pbpb": {
+      "added": "2026-08-17T22:13:41+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "tuff-baby-pLFS3LLE.gif",
+      "title": "",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/omg-tuff-baby-ai-pLFS3LLE1cIfK7pbpb"
+    },
     "giphy:pvtnpuNUlzWz36xOU4": {
       "file": "shopping-looking-pvtnpuNU.gif",
       "title": "Shopping Looking GIF",
@@ -728,7 +1146,7 @@
       ],
       "page": "https://giphy.com/gifs/capybara-capybam-safety-pvtnpuNUlzWz36xOU4",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
+      "uses": 1,
       "wins": 0,
       "w": 350,
       "h": 200
@@ -746,6 +1164,127 @@
       "w": 332,
       "h": 320
     },
+    "giphy:qVgTbY96Zj3eUjeDDX": {
+      "added": "2026-08-17T22:04:56+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "police-emergency-by-south-park-qVgTbY96.gif",
+      "title": "Police Emergency GIF by South Park",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/southpark-south-park-s26e2-qVgTbY96Zj3eUjeDDX"
+    },
+    "giphy:qgOlJdFGNxKrS": {
+      "added": "2026-08-17T22:07:31+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "shocked-despicable-me-qgOlJdFG.gif",
+      "title": "Shocked Despicable Me GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/despicable-me-shocked-gru-qgOlJdFGNxKrS"
+    },
+    "giphy:qwr614iHK9bqdXfeF8": {
+      "added": "2026-08-17T22:14:18+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "man-sigma-qwr614iH.gif",
+      "title": "Man Sigma GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/aura-999-9999-mansigma-qwr614iHK9bqdXfeF8"
+    },
+    "giphy:riOXDXKi21xZ02Bg0M": {
+      "added": "2026-08-17T19:32:58+00:00",
+      "uses": 1,
+      "wins": 1,
+      "file": "ishowspeed-riOXDXKi.gif",
+      "title": "Ishowspeed GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/larp-king-ishowspeed-looks-at-riOXDXKi21xZ02Bg0M"
+    },
+    "giphy:s5wFafpHxqKbIEERl9": {
+      "added": "2026-08-17T19:24:39+00:00",
+      "uses": 1,
+      "wins": 0,
+      "file": "cracking-up-lol-by-strapped-s5wFafpH.gif",
+      "title": "Cracking Up Lol GIF by STRAPPED!",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/STRAPPEDUS-speed-ishowspeed-i-show-s5wFafpHxqKbIEERl9"
+    },
+    "giphy:tC4FZ86hOeb3ciMuIw": {
+      "added": "2026-08-17T19:23:11+00:00",
+      "uses": 1,
+      "wins": 0,
+      "file": "max-verstappen-cortisol-tC4FZ86h.gif",
+      "title": "Max Verstappen Cortisol GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/max-verstappen-cortisol-tC4FZ86hOeb3ciMuIw"
+    },
+    "giphy:tgkiyWVbpksqhRKuw0": {
+      "added": "2026-08-17T19:24:54+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "speed-tgkiyWVb.gif",
+      "title": "Speed GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/meme-ishowspeed-speed-laughing-tgkiyWVbpksqhRKuw0"
+    },
+    "giphy:toXKzaJP3WIgM": {
+      "added": "2026-08-17T22:10:05+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "happy-jim-carrey-toXKzaJP.gif",
+      "title": "Happy Jim Carrey GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/toXKzaJP3WIgM"
+    },
+    "giphy:uSudfiSP14WSTlOE9a": {
+      "added": "2026-08-17T19:31:53+00:00",
+      "uses": 1,
+      "wins": 0,
+      "file": "shrek-pickle-uSudfiSP.gif",
+      "title": "Shrek Pickle GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/shrek-john-pork-johnpork-uSudfiSP14WSTlOE9a"
+    },
+    "giphy:vFEDEcCxckXcSS09PG": {
+      "added": "2026-08-17T22:14:17+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "aura-tuff-vFEDEcCx.gif",
+      "title": "Aura Tuff GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/tuff-why-is-he-so-vFEDEcCxckXcSS09PG"
+    },
+    "giphy:wKJSRY2OgYx2m6R4oA": {
+      "added": "2026-08-17T19:24:08+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "freak-sonic-meme-wKJSRY2O.gif",
+      "title": "Freak Sonic Meme GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/sonic-freaky-rizz-wKJSRY2OgYx2m6R4oA"
+    },
     "giphy:wOR247pv3KG6LclwTE": {
       "file": "sorry-game-night-by-south-park-wOR247pv.gif",
       "title": "Sorry Game Night GIF by South Park",
@@ -759,18 +1298,27 @@
       "w": 480,
       "h": 345
     },
-    "giphy:xnrJ4uyFU5gR3t2HRQ": {
-      "file": "naruto-trash-xnrJ4uyF.gif",
-      "title": "Naruto Trash GIF",
+    "giphy:xnQU5pDVvRFQsiQgm1": {
+      "added": "2026-08-17T19:31:43+00:00",
+      "uses": 1,
+      "wins": 0,
+      "file": "john-pork-by-respective-xnQU5pDV.gif",
+      "title": "John Pork GIF by Respective",
       "sets": [
         "normal"
       ],
-      "page": "https://giphy.com/gifs/naruto-trash-bin-xnrJ4uyFU5gR3t2HRQ",
-      "added": "2026-08-17T00:00:00+00:00",
+      "page": "https://giphy.com/gifs/RespectiveCollective-john-pork-johnpork-braintrot-xnQU5pDVvRFQsiQgm1"
+    },
+    "giphy:xtwyefP9CfKL9urbEV": {
+      "added": "2026-08-17T22:18:11+00:00",
       "uses": 0,
       "wins": 0,
-      "w": 208,
-      "h": 200
+      "file": "iron-man-marvel-xtwyefP9.gif",
+      "title": "Iron Man Marvel GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/charlie-kirk-xtwyefP9CfKL9urbEV"
     },
     "giphy:y2i2oqWgzh5ioRp4Qa": {
       "file": "first-half-y2i2oqWg.gif",
@@ -784,6 +1332,17 @@
       "wins": 0,
       "w": 360,
       "h": 200
+    },
+    "giphy:zYogSaTdkacvTbQi0V": {
+      "added": "2026-08-17T19:24:23+00:00",
+      "uses": 0,
+      "wins": 0,
+      "file": "anthony-mackie-son-zYogSaTd.gif",
+      "title": "Anthony Mackie Son GIF",
+      "sets": [
+        "normal"
+      ],
+      "page": "https://giphy.com/gifs/meme-emauxti0n-emauxtion-zYogSaTdkacvTbQi0V"
     },
     "giphy:ziRerRgaKQHY7Bad99": {
       "file": "unimpressed-yeah-right-by-bounce-ziRerRga.gif",
@@ -834,7 +1393,7 @@
       ],
       "page": "https://tenor.com/view/brave-weopslenquakush-lisa-lisa-the-painful-cloudy-with-a-chance-of-meatballs-gif-19523605",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
+      "uses": 1,
       "wins": 0,
       "url": "https://tenor.com/view/brave-weopslenquakush-lisa-lisa-the-painful-cloudy-with-a-chance-of-meatballs-gif-19523605",
       "w": 498,
@@ -844,7 +1403,7 @@
       "file": "kiss-lgbt-25e19217.gif",
       "title": "Kiss Lgbt",
       "sets": [
-        "normal"
+        "adult"
       ],
       "page": "https://tenor.com/view/kiss-lgbt-gay-gaming-elden-ring-gif-24997915",
       "added": "2026-08-17T00:00:00+00:00",
@@ -890,8 +1449,8 @@
       ],
       "page": "https://tenor.com/view/ohno-meme-monkey-ohno-ohno-monkey-ohno-emote-ohno-twitch-emote-gif-119989999548046247",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
-      "wins": 0,
+      "uses": 1,
+      "wins": 1,
       "url": "https://tenor.com/view/ohno-meme-monkey-ohno-ohno-monkey-ohno-emote-ohno-twitch-emote-gif-119989999548046247",
       "w": 120,
       "h": 128
@@ -932,8 +1491,8 @@
       ],
       "page": "https://tenor.com/view/idfk-gif-3761179052566277881",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
-      "wins": 0,
+      "uses": 1,
+      "wins": 1,
       "url": "https://tenor.com/view/idfk-gif-3761179052566277881",
       "w": 281,
       "h": 374
@@ -946,7 +1505,7 @@
       ],
       "page": "https://tenor.com/view/soap-gay-bath-oops-gif-10322886",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
+      "uses": 1,
       "wins": 0,
       "url": "https://tenor.com/view/soap-gay-bath-oops-gif-10322886",
       "w": 408,
@@ -970,7 +1529,7 @@
       "file": "relax-chill-8e21c578.gif",
       "title": "Relax Chill",
       "sets": [
-        "normal"
+        "adult"
       ],
       "page": "https://tenor.com/view/relax-chill-calmdown-gif-4795571",
       "added": "2026-08-17T00:00:00+00:00",
@@ -984,7 +1543,7 @@
       "file": "38755948-46c0-44ee-bfc7-271cd815e895-9d2e4f2f.gif",
       "title": "38755948 46C0 44EE BFC7 271CD815E895",
       "sets": [
-        "normal"
+        "adult"
       ],
       "page": "https://cdn.discordapp.com/attachments/947981052645900338/979586804065898496/38755948-46C0-44EE-BFC7-271CD815E895.gif?ex=6a847a0d&is=6a83288d&hm=182f44f67c05c07da8a2ac64dfffbfe111da889a9c48a10bbaab91b364b21352",
       "added": "2026-08-17T00:00:00+00:00",
@@ -1002,25 +1561,11 @@
       ],
       "page": "https://tenor.com/view/cat-annoyed-annoyed-face-upset-look-at-us-gif-21260676",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
+      "uses": 1,
       "wins": 0,
       "url": "https://tenor.com/view/cat-annoyed-annoyed-face-upset-look-at-us-gif-21260676",
       "w": 220,
       "h": 268
-    },
-    "url:cab766758b": {
-      "file": "haha-cab76675.gif",
-      "title": "Haha",
-      "sets": [
-        "normal"
-      ],
-      "page": "https://tenor.com/view/haha-gif-21635374",
-      "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
-      "wins": 0,
-      "url": "https://tenor.com/view/haha-gif-21635374",
-      "w": 220,
-      "h": 168
     },
     "url:cc791d8b8e": {
       "file": "josh-wurman-josh-shaker-cc791d8b.gif",
@@ -1030,7 +1575,7 @@
       ],
       "page": "https://tenor.com/view/josh-wurman-josh-shaker-dow-3-josh-wurman-dow-3-wurman-gif-18292192777969904765",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
+      "uses": 1,
       "wins": 0,
       "url": "https://tenor.com/view/josh-wurman-josh-shaker-dow-3-josh-wurman-dow-3-wurman-gif-18292192777969904765",
       "w": 165,
@@ -1054,7 +1599,7 @@
       "file": "among-us-among-us-funny-d06ba5d1.gif",
       "title": "Among Us Among Us Funny",
       "sets": [
-        "normal"
+        "adult"
       ],
       "page": "https://tenor.com/view/among-us-among-us-funny-among-porn-among-us-porn-cum-gif-20241052",
       "added": "2026-08-17T00:00:00+00:00",
@@ -1086,8 +1631,8 @@
       ],
       "page": "https://tenor.com/view/bloons-bloonstd6-bloons-tower-defense-bloons-tower-defense6-get-on-bloons-td6-gif-20761465",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
-      "wins": 0,
+      "uses": 1,
+      "wins": 1,
       "url": "https://tenor.com/view/bloons-bloonstd6-bloons-tower-defense-bloons-tower-defense6-get-on-bloons-td6-gif-20761465",
       "w": 498,
       "h": 186
@@ -1114,8 +1659,8 @@
       ],
       "page": "https://tenor.com/view/bible-study-group-bsggc-natsume-sakasaki-natsume-enstars-tsumugi-aoba-gif-23489367",
       "added": "2026-08-17T00:00:00+00:00",
-      "uses": 0,
-      "wins": 0,
+      "uses": 1,
+      "wins": 1,
       "url": "https://tenor.com/view/bible-study-group-bsggc-natsume-sakasaki-natsume-enstars-tsumugi-aoba-gif-23489367",
       "w": 220,
       "h": 146

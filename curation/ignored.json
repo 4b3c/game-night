@@ -1,4 +1,60 @@
 {
   "version": 1,
-  "cards": {}
+  "cards": {
+    "giphy:3o6UBgDNiVZHmypHuU": {
+      "ignored": "2026-08-17T18:06:06+00:00",
+      "title": "Bored Over It",
+      "page": "https://giphy.com/gifs/ricky-gervais-kill-me-golden-globes-2016-3o6UBgDNiVZHmypHuU"
+    },
+    "giphy:8RvL5KGDdP5i7Ns4gK": {
+      "ignored": "2026-08-17T18:05:30+00:00",
+      "title": "Meme Dogs  by Shibetoshi Nakamoto",
+      "page": "https://giphy.com/gifs/8RvL5KGDdP5i7Ns4gK"
+    },
+    "giphy:DPlOoiVBTVto6RkUWg": {
+      "ignored": "2026-08-17T18:04:02+00:00",
+      "title": "Happy Americas Got Talent  by Top Talent",
+      "page": "https://giphy.com/gifs/toptalent-agt-americas-got-talent-DPlOoiVBTVto6RkUWg"
+    },
+    "giphy:EQITBw3InhwiduaMUz": {
+      "ignored": "2026-08-17T18:07:46+00:00",
+      "title": "911 On Fox  by FOX TV",
+      "page": "https://giphy.com/gifs/foxtv-fox-911-on-EQITBw3InhwiduaMUz"
+    },
+    "giphy:LEkV0EyhtA23UMxGDl": {
+      "ignored": "2026-08-17T18:05:38+00:00",
+      "title": "Charlie Kirk",
+      "page": "https://giphy.com/gifs/sidhu-moosewala-smw-sussyjatt-LEkV0EyhtA23UMxGDl"
+    },
+    "giphy:QIDAVcyucrnVK": {
+      "ignored": "2026-08-17T18:05:26+00:00",
+      "title": "cockroach",
+      "page": "https://giphy.com/gifs/cockroach-QIDAVcyucrnVK"
+    },
+    "giphy:VCn1VA3URcSVlK45Hl": {
+      "ignored": "2026-08-17T18:05:11+00:00",
+      "title": "\ub77c\uc778\ud504\ub80c\uc988 Lol  by LINE FRIENDS",
+      "page": "https://giphy.com/gifs/LINEFRIENDS-linefriends-minini-minini24-VCn1VA3URcSVlK45Hl"
+    },
+    "giphy:WHgQZgSeETlNy3410E": {
+      "ignored": "2026-08-17T18:03:57+00:00",
+      "title": "Goku Meme",
+      "page": "https://giphy.com/gifs/goku-meme-negativity-WHgQZgSeETlNy3410E"
+    },
+    "giphy:ZlJETaiooNk89O3KEv": {
+      "ignored": "2026-08-17T18:07:51+00:00",
+      "title": "Fashion Dripping  by South Park",
+      "page": "https://giphy.com/gifs/southpark-south-park-s26e2-ZlJETaiooNk89O3KEv"
+    },
+    "giphy:xnrJ4uyFU5gR3t2HRQ": {
+      "ignored": "2026-08-17T18:05:02+00:00",
+      "title": "Naruto Trash",
+      "page": "https://giphy.com/gifs/naruto-trash-bin-xnrJ4uyFU5gR3t2HRQ"
+    },
+    "url:cab766758b": {
+      "ignored": "2026-08-17T18:03:59+00:00",
+      "title": "Haha",
+      "page": "https://tenor.com/view/haha-gif-21635374"
+    }
+  }
 }
