@@ -264,6 +264,11 @@
   const SETS = {{ sets | tojson }};
   const STARTERS = {{ queries | tojson }};   // a few search terms to get going
   const GIF_BASE = {{ url_for('static', filename='gifs/') | tojson }};
+  // Absolute, not relative. Reached as /curate (no trailing slash) a relative "api/next"
+  // resolves against the parent and lands on the *game*, which answers with HTML — so
+  // every fetch went "Unexpected token '<'". url_for knows the prefix; nothing else does.
+  const BASE = {{ url_for('index') | tojson }};
+  const apiUrl = (path) => BASE.replace(/\/?$/, '/') + path;
   const el = (id) => document.getElementById(id);
   const gif = el('gif'), meta = el('meta'), tally = el('tally'), problem = el('problem');
   const flashEl = el('flash'), preload = el('preload'), tags = el('tags'), search = el('search');
@@ -338,7 +343,7 @@
   }
 
   async function loadLibrary() {
-    const data = await (await fetch('api/library')).json();
+    const data = await (await fetch(apiUrl('api/library'))).json();
     cards = data.cards || [];
     renderCounts(data.counts);
     drawFilters();
@@ -353,7 +358,7 @@
     if (card) card.sets = sets;      // optimistic — the grid responds instantly
     drawGrid();
     try {
-      const response = await fetch('api/retag', {
+      const response = await fetch(apiUrl('api/retag'), {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({source_id: sourceId, sets: sets}),
       });
@@ -377,7 +382,7 @@
     const raw = el('links').value.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
     if (!raw.length) { flash('Paste a link first', true); return; }
     flash('Fetching ' + raw.length + ' link(s)…');
-    const data = await (await fetch('api/add-link', {
+    const data = await (await fetch(apiUrl('api/add-link'), {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({links: raw}),
     })).json();
@@ -419,7 +424,7 @@
   }
 
   async function fill(n) {
-    const response = await fetch('api/next?n=' + (n || 6));
+    const response = await fetch(apiUrl('api/next?n=') + (n || 6));
     const data = await response.json();
     renderCounts(data.counts);
     problem.textContent = data.error || '';
@@ -441,7 +446,7 @@
     // Scrolling past something counts as having seen it, so it won't come round again
     // tomorrow. Tagged ones are remembered anyway.
     if (step > 0 && leaving && !(leaving.sets || []).length) {
-      fetch('api/seen', {method: 'POST', headers: {'Content-Type': 'application/json'},
+      fetch(apiUrl('api/seen'), {method: 'POST', headers: {'Content-Type': 'application/json'},
                          body: JSON.stringify({candidate: leaving})}).catch(() => {});
     }
   }
@@ -457,7 +462,7 @@
     c.sets = sets;              // optimistic, so the buttons respond instantly
     paint();
     try {
-      const response = await fetch('api/sets', {
+      const response = await fetch(apiUrl('api/sets'), {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({candidate: c, sets: sets}),
       });
@@ -483,7 +488,7 @@
   }
 
   async function pin(query) {
-    await fetch('api/query', {method: 'POST', headers: {'Content-Type': 'application/json'},
+    await fetch(apiUrl('api/query'), {method: 'POST', headers: {'Content-Type': 'application/json'},
                               body: JSON.stringify({query: query})});
     liveQuery = query || null;
     search.value = query || '';
@@ -505,7 +510,7 @@
     const c = current();
     if (!c) { flash('Nothing to go on', true); return; }
     const term = (c.query && c.query !== 'trending' && !c.local) ? c.query : '';
-    const url = 'api/related?term=' + encodeURIComponent(term) + '&title=' + encodeURIComponent(c.title || '');
+    const url = apiUrl('api/related?term=') + encodeURIComponent(term) + '&title=' + encodeURIComponent(c.title || '');
     const data = await (await fetch(url)).json();
     relatedTags = (data.tags && data.tags.length) ? data.tags : (data.fallback || []);
     drawTags();
