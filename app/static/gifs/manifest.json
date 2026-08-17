@@ -678,7 +678,7 @@
       "file": "all-your-base-are-belong-to-us-lNFEt2aX.gif",
       "label": "All Your Base Are Belong To Us Lnfet2Ax",
       "sets": [
-        "normal"
+        "adult"
       ],
       "source": "giphy:lNFEt2aXfViv5Rw9Ki",
       "w": 480,
@@ -688,7 +688,9 @@
       "id": "the-muppets-kermit-the-frog-27713950",
       "file": "the-muppets-kermit-the-frog-27713950.gif",
       "label": "The Muppets Kermit The Frog",
-      "sets": [],
+      "sets": [
+        "normal"
+      ],
       "source": "url:277139502d",
       "w": 498,
       "h": 280
