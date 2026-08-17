@@ -126,14 +126,20 @@ modes that aren't ready and the curator shows a progress meter for each. There's
 delete the 80 placeholders once you've got real ones.
 
 Curated GIFs are gitignored on purpose — they came from someone else's API and this repo is
-public. To get them onto the server:
+public. Two ways to get them into a deployed game:
 
 ```bash
+# from your laptop: rsync the GIFs, manifest and decision history to the server
 GAH_HOST=root@your-server ./scripts/push_gifs.sh
+
+# or run the curator on the server itself, reachable only over Tailscale, and curate
+# from your phone — tagged cards are in the next game immediately
+docker compose --profile curator up -d --build      # see DEPLOY.md for CURATOR_BIND
 ```
 
-(One-time on the server: a `docker-compose.override.yml` mounting `./app/static/gifs`, so a
-push doesn't need an image rebuild. See the script's comments and DEPLOY.md.)
+The curator has no login, so if you run it on a server, bind it to your Tailscale address
+(`CURATOR_BIND`) and never to `0.0.0.0`. DEPLOY.md has the full recipe and the checks that
+prove the public internet can't reach it.
 
 **The rules** — the knobs are constants at the top of `app/games/gah/engine.py`: hand size,
 prompt choices, player limits, score range, and the away-grace windows.

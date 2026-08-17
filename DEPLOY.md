@@ -163,6 +163,47 @@ hold 56 cards at once, and the lobby greys out modes that aren't there yet.
 Prompts travel in git: edit `app/data/prompts.json`, commit, pull, `docker compose up -d
 --build`.
 
+## Curating from your phone (Tailscale only)
+
+The curator can run on the server, writing straight into the folder the game reads — tag a
+card on your phone and it's in the next game, no rsync, no restart (the app re-reads the
+manifest when it changes).
+
+It has **no login**, so the only thing protecting it is what address it listens on. Bind it
+to the box's Tailscale address and it's reachable from your own devices and nothing else:
+
+```bash
+cd /opt/game-night
+tailscale ip -4                                    # e.g. 100.117.22.95
+
+# in .env (gitignored):
+CURATOR_BIND=100.117.22.95     # your Tailscale address — NEVER 0.0.0.0 here
+GIPHY_API_KEY=...              # curator only; the game doesn't use it
+CURATOR_MIN_FRAMES=10
+CURATOR_RATING=r
+
+# the folders the curator writes to must be writable by the container user
+chown -R 10001:10001 app/static/gifs curation
+
+docker compose --profile curator up -d --build
+```
+
+Then open `http://100.117.22.95:5099` on any device on your tailnet. Check the outside can't:
+
+```bash
+curl -m 5 http://YOUR.PUBLIC.IP:5099/     # must fail (000 / connection refused)
+ss -tlnp | grep 5099                      # must show only 100.x.y.z:5099
+```
+
+Stop it when you're done curating — no reason to leave it up:
+
+```bash
+docker compose --profile curator stop curator
+```
+
+The curator mounts `scripts/` read-only, so tweaking its UI needs a `restart`, not a rebuild.
+The game deliberately doesn't do that: it runs exactly what was built.
+
 ## Sizing
 
 A single gevent worker on the smallest VPS is plenty: one game is 8 sockets exchanging a
