@@ -68,9 +68,15 @@
     .meta .chip { padding: 2px 9px; border-radius: var(--gn-radius-pill); background: rgba(0,0,0,.3); font-size: .75rem; }
     .pos { font-variant-numeric: tabular-nums; }
 
-    /* controls */
-    .rowbtns { display: grid; grid-template-columns: auto 1fr 1fr 1fr auto; gap: 10px; align-items: stretch; }
-    @media (max-width: 700px) { .rowbtns { grid-template-columns: 1fr 1fr; } }
+    /* controls: one row on a desktop, two thumb-sized rows on a phone */
+    .sets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .nav { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; margin-top: 10px; }
+    @media (min-width: 760px) {
+      .controls { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: stretch; }
+      .nav { display: contents; }
+      .nav .navbtn:first-child { order: -1; }
+      .sets { order: 0; }
+    }
     .btn kbd { font-family: var(--gn-font-body); font-size: .66rem; font-weight: 800; opacity: .72; letter-spacing: .06em; }
     .verdict { flex-direction: column; gap: 2px; padding: 14px 8px; }
     /* Off = outline only, on = filled. A GIF can be in several sets at once. */
@@ -79,7 +85,7 @@
     .v-normal[aria-pressed="true"] { background: var(--gn-accent-3); color: var(--gn-accent-3-ink); }
     .v-adult[aria-pressed="true"] { background: var(--gn-accent-2); color: var(--gn-accent-2-ink); }
     .v-millennial[aria-pressed="true"] { background: var(--gn-accent-1); color: var(--gn-accent-1-ink); }
-    .nav { padding: 14px 18px; }
+    .navbtn { padding: 16px 18px; }
 
     .foot { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
     .hint { color: var(--gn-ink-dim); font-size: .8rem; }
@@ -126,19 +132,26 @@
       <p class="meta" id="meta"></p>
     </section>
 
-    <section class="rowbtns">
-      <button class="btn nav btn--ghost" data-action="prev" type="button">← <kbd>Back</kbd></button>
-      {% for name, meta in sets.items() %}
-      <button class="btn verdict v-{{ name }}" data-set="{{ name }}" aria-pressed="false" type="button">
-        {{ meta.label }} <kbd>{{ meta.key }}</kbd>
-      </button>
-      {% endfor %}
-      <button class="btn nav btn--go" data-action="next" type="button">→ <kbd>Next</kbd></button>
+    <section class="controls">
+      <div class="sets">
+        {% for name, meta in sets.items() %}
+        <button class="btn verdict v-{{ name }}" data-set="{{ name }}" aria-pressed="false" type="button">
+          {{ meta.label }} <kbd>{{ meta.key }}</kbd>
+        </button>
+        {% endfor %}
+      </div>
+      <div class="nav">
+        <button class="btn navbtn btn--ghost" data-action="prev" type="button">← <kbd>Back</kbd></button>
+        <button class="btn navbtn btn--go" data-action="next" type="button">Next → <kbd>→</kbd></button>
+      </div>
     </section>
 
     <div class="foot">
       <button class="btn btn--tiny btn--ghost" data-action="clear" type="button">Remove from all sets <kbd>X</kbd></button>
-      <span class="hint">Drag your own GIFs anywhere on this page · tagged GIFs land in <code>app/static/gifs/</code></span>
+      <label class="btn btn--tiny" for="pick">＋ Add your own GIFs
+        <input id="pick" type="file" accept="image/gif,.gif" multiple hidden>
+      </label>
+      <span class="hint">or drag them onto the page · tagged GIFs go straight into the game</span>
       <button class="btn btn--tiny btn--danger" data-action="drop-filler" type="button">Delete the 80 placeholders</button>
     </div>
 
@@ -352,10 +365,7 @@
   document.addEventListener('dragleave', (event) => {
     if (!event.relatedTarget) stage.classList.remove('stage--drop');
   });
-  document.addEventListener('drop', async (event) => {
-    event.preventDefault();
-    stage.classList.remove('stage--drop');
-    const files = Array.from((event.dataTransfer && event.dataTransfer.files) || []);
+  async function upload(files) {
     if (!files.length) return;
     const form = new FormData();
     files.forEach((file) => form.append('files', file));
@@ -367,8 +377,18 @@
       // Slot them in right after where we are, so they can be tagged straight away.
       history.splice(index + 1, 0, ...data.candidates);
       go(1);
-      flash('Yours — press N / E / M to file it');
+      flash('Yours — now tag it with N / E / M');
     }
+  }
+
+  document.addEventListener('drop', (event) => {
+    event.preventDefault();
+    stage.classList.remove('stage--drop');
+    upload(Array.from((event.dataTransfer && event.dataTransfer.files) || []));
+  });
+  el('pick').addEventListener('change', (event) => {
+    upload(Array.from(event.target.files || []));
+    event.target.value = '';   // so picking the same file twice still fires
   });
 
   renderCounts({{ counts | tojson }});

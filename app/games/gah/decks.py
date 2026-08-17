@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import random
+import threading
 from functools import lru_cache
 from pathlib import Path
 
@@ -35,14 +36,42 @@ def load_prompts() -> tuple[dict, ...]:
     return tuple(out)
 
 
-@lru_cache(maxsize=1)
+# The manifest is re-read whenever it changes on disk, rather than cached for the life of
+# the process: the curator (scripts/curate_gifs.py) writes to it while the game is running,
+# and cards you tag should show up in the next game without a restart.
+_gif_lock = threading.Lock()
+_gif_cache: tuple[int, tuple[dict, ...]] | None = None
+
+
+def _manifest_stamp() -> int:
+    try:
+        return GIF_MANIFEST_PATH.stat().st_mtime_ns
+    except OSError:
+        return 0
+
+
 def load_gifs() -> tuple[dict, ...]:
-    """[{id, file, label, rating}] from app/static/gifs/manifest.json.
+    """[{id, file, label, sets}] from app/static/gifs/manifest.json.
 
     Entries whose file isn't on disk are skipped: the manifest travels in git while the
     curated GIFs are rsynced separately, so a partially-synced folder should mean fewer
     cards, not broken pictures mid-game.
     """
+    global _gif_cache
+    stamp = _manifest_stamp()
+    cached = _gif_cache
+    if cached is not None and cached[0] == stamp:
+        return cached[1]
+    with _gif_lock:
+        cached = _gif_cache
+        if cached is not None and cached[0] == stamp:
+            return cached[1]
+        gifs = _read_manifest()
+        _gif_cache = (stamp, gifs)
+        return gifs
+
+
+def _read_manifest() -> tuple[dict, ...]:
     if not GIF_MANIFEST_PATH.exists():
         raise DeckError(
             f"{GIF_MANIFEST_PATH} missing -- run `python scripts/scan_gifs.py` (or "

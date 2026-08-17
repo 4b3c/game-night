@@ -42,3 +42,45 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  # The GIF curator. Off by default — start it when you want to curate:
+  #
+  #   docker compose --profile curator up -d curator
+  #   docker compose --profile curator down
+  #
+  # CURATOR_BIND decides who can reach it, and it is the only thing standing between this
+  # tool and the internet: it has no login. Default 127.0.0.1 = this machine only. On a
+  # server, set it to your Tailscale address so it's reachable from your own devices and
+  # nothing else — never 0.0.0.0.
+  curator:
+    profiles: ["curator"]
+    build: .
+    image: game-night:local
+    container_name: gah-curator
+    restart: unless-stopped
+    command:
+      - python
+      - scripts/curate_gifs.py
+      - "--host"
+      - "0.0.0.0"          # inside the container; the published port below is the gate
+      - "--port"
+      - "5099"
+      - "--min-frames"
+      - "${CURATOR_MIN_FRAMES:-10}"
+      - "--rating"
+      - "${CURATOR_RATING:-r}"
+    environment:
+      GIPHY_API_KEY: ${GIPHY_API_KEY:-}
+      TENOR_API_KEY: ${TENOR_API_KEY:-}
+    ports:
+      - "${CURATOR_BIND:-127.0.0.1}:5099:5099"
+    volumes:
+      # Writes cards straight into the folder the game reads, so anything you tag is in
+      # the next game — the app re-reads the manifest when it changes.
+      - ./app/static/gifs:/app/app/static/gifs:rw
+      - ./curation:/app/curation:rw
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

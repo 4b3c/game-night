@@ -34,9 +34,18 @@ echo "  sending $count gifs + manifest.json to $HOST:$REMOTE_PATH/app/static/gif
 
 # --delete so GIFs you removed locally also disappear there; the manifest travels with
 # them so the two never disagree.
-rsync -az --delete --info=stats1 \
+# openrsync (the macOS default) has no --info, so plain --stats
+rsync -az --delete --stats \
   --include='*.gif' --include='manifest.json' --exclude='*' \
   "$LOCAL_GIFS" "$HOST:$REMOTE_PATH/app/static/gifs/"
+
+# Decisions travel too: they're what stops GIFs you've already judged coming round again,
+# so curating on the server should start where you left off here.
+if [[ -f "$HERE/curation/decisions.json" ]]; then
+  echo "  sending your decision history"
+  ssh "$HOST" "mkdir -p '$REMOTE_PATH/curation'"
+  rsync -az "$HERE/curation/decisions.json" "$HOST:$REMOTE_PATH/curation/decisions.json"
+fi
 
 echo "  restarting the game"
 ssh "$HOST" "cd '$REMOTE_PATH' && docker compose up -d && sleep 5 && curl -s localhost:5050/healthz && echo"
