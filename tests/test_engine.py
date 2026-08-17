@@ -11,7 +11,7 @@ import random
 import pytest
 
 from app.games.gah import engine as E
-from app.games.gah.decks import Deck, build_gif_deck, load_gifs
+from app.games.gah.decks import Deck, build_gif_deck, gifs_for_mode, load_gifs
 from app.games.gah.engine import ActionError, Game, Phase
 
 
@@ -199,7 +199,7 @@ def test_two_players_can_never_hold_the_same_gif():
     reshuffled several times over a game this long — exactly where a double-deal bug
     would show up.
     """
-    total = len(load_gifs())
+    total = len(gifs_for_mode("normal"))
     game, _ = make_game(8, start=True, target_score=10, judge_rotation="circle")
     check_no_duplicates(game, total, "after the deal")
 
@@ -239,13 +239,15 @@ def test_each_mode_deals_only_its_own_cards(monkeypatch):
     from app.games.gah import decks
 
     tagged = (
-        [{"id": f"s{i}", "file": f"s{i}.gif", "label": "s", "rating": "sfw"} for i in range(30)]
-        + [{"id": f"a{i}", "file": f"a{i}.gif", "label": "a", "rating": "adult"} for i in range(30)]
-        + [{"id": f"m{i}", "file": f"m{i}.gif", "label": "m", "rating": "millennial"} for i in range(30)]
+        [{"id": f"s{i}", "file": f"s{i}.gif", "label": "s", "sets": ["normal"]} for i in range(30)]
+        + [{"id": f"a{i}", "file": f"a{i}.gif", "label": "a", "sets": ["adult"]} for i in range(30)]
+        + [{"id": f"m{i}", "file": f"m{i}.gif", "label": "m", "sets": ["millennial"]} for i in range(30)]
+        # one card in two modes at once — the whole point of sets
+        + [{"id": "both", "file": "both.gif", "label": "b", "sets": ["normal", "adult"]}]
     )
     monkeypatch.setattr(decks, "load_gifs", lambda: tuple(tagged))
 
-    assert decks.mode_counts() == {"normal": 30, "adult": 30, "millennial": 30}
+    assert decks.mode_counts() == {"normal": 31, "adult": 31, "millennial": 30}
 
     for mode, prefix in (("normal", "s"), ("adult", "a"), ("millennial", "m")):
         game, _ = make_game(4, start=False)
@@ -253,8 +255,21 @@ def test_each_mode_deals_only_its_own_cards(monkeypatch):
         game.start_game("p0")
         dealt = [card for player in game.players.values() for card in player.hand]
         assert dealt, "nothing was dealt"
-        assert all(card.startswith(prefix) for card in dealt), f"{mode} dealt a card from another pile"
+        allowed = {c["id"] for c in decks.gifs_for_mode(mode)}
+        assert set(dealt) <= allowed, f"{mode} dealt a card from another pile"
+        assert any(card.startswith(prefix) for card in dealt)
         assert game.public_state()["options"]["mode"] == mode
+
+
+def test_an_older_single_tag_manifest_still_works():
+    """Manifests written before sets existed used one `rating` per card."""
+    from app.games.gah.decks import _sets_of
+
+    assert _sets_of({"rating": "sfw"}) == ("normal",)
+    assert _sets_of({"rating": "adult"}) == ("adult",)
+    assert _sets_of({"rating": "millennial"}) == ("millennial",)
+    assert _sets_of({}) == ("normal",)
+    assert _sets_of({"sets": ["normal", "adult"], "rating": "sfw"}) == ("normal", "adult")
 
 
 def test_an_unknown_mode_is_refused():
@@ -266,8 +281,8 @@ def test_an_unknown_mode_is_refused():
 def test_a_mode_without_enough_cards_says_so(monkeypatch):
     from app.games.gah import decks
 
-    thin = [{"id": f"a{i}", "file": f"a{i}.gif", "label": "a", "rating": "adult"} for i in range(10)]
-    sfw = [{"id": f"s{i}", "file": f"s{i}.gif", "label": "s", "rating": "sfw"} for i in range(60)]
+    thin = [{"id": f"a{i}", "file": f"a{i}.gif", "label": "a", "sets": ["adult"]} for i in range(10)]
+    sfw = [{"id": f"s{i}", "file": f"s{i}.gif", "label": "s", "sets": ["normal"]} for i in range(60)]
     monkeypatch.setattr(decks, "load_gifs", lambda: tuple(thin + sfw))
 
     game, _ = make_game(4)
@@ -290,7 +305,7 @@ def test_a_mode_without_enough_cards_says_so(monkeypatch):
 def test_starting_without_enough_gifs_is_refused_before_dealing(monkeypatch):
     """Swapping in your own GIFs shouldn't be able to half-deal a game."""
     game, _ = make_game(8)
-    small = tuple(load_gifs()[:20])  # 20 cards, 8 players need 56
+    small = tuple(gifs_for_mode("normal")[:20])  # 20 cards, 8 players need 56
     monkeypatch.setattr("app.games.gah.decks.load_gifs", lambda: small)
 
     with pytest.raises(ActionError, match="Normal mode only has 20 GIFs"):
@@ -303,7 +318,7 @@ def test_starting_without_enough_gifs_is_refused_before_dealing(monkeypatch):
 
 def test_deck_recycles_its_discard_pile():
     deck = build_gif_deck(random.Random(1))
-    drawn = [deck.draw() for _ in range(len(load_gifs()))]
+    drawn = [deck.draw() for _ in range(len(gifs_for_mode("normal")))]
     assert not deck.draw_pile
     deck.discard(*drawn)
     assert deck.draw() in drawn  # recycled rather than raising

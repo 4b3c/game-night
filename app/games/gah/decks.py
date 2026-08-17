@@ -63,8 +63,9 @@ def load_gifs() -> tuple[dict, ...]:
                 "id": g["id"],
                 "file": g["file"],
                 "label": g.get("label", g["id"]),
-                # "sfw" unless the curator marked it; see scripts/curate_gifs.py
-                "rating": g.get("rating", "sfw"),
+                # Which modes this card belongs to — a card can be in several. Written by
+                # scripts/curate_gifs.py. `rating` is the older single-tag form.
+                "sets": _sets_of(g),
             }
         )
     if missing:
@@ -74,21 +75,30 @@ def load_gifs() -> tuple[dict, ...]:
     return tuple(out)
 
 
+def _sets_of(entry: dict) -> tuple[str, ...]:
+    """Modes an entry belongs to, tolerating the older single-`rating` manifests."""
+    sets = entry.get("sets")
+    if isinstance(sets, (list, tuple)) and sets:
+        return tuple(str(s) for s in sets)
+    legacy = {"sfw": "normal", "adult": "adult", "millennial": "millennial"}
+    return (legacy.get(entry.get("rating", "sfw"), "normal"),)
+
+
 # --- modes ---------------------------------------------------------------------
 # Each mode deals from its own set of cards, tagged by scripts/curate_gifs.py. Adding a
 # fourth mode is one entry here plus one button in the lobby.
 MODES: dict[str, dict] = {
-    "normal": {"label": "Normal", "emoji": "🙂", "ratings": ("sfw",)},
-    "adult": {"label": "18+", "emoji": "🌶️", "ratings": ("adult",)},
-    "millennial": {"label": "Millennial", "emoji": "📼", "ratings": ("millennial",)},
+    "normal": {"label": "Normal", "emoji": "🙂"},
+    "adult": {"label": "18+", "emoji": "🌶️"},
+    "millennial": {"label": "Millennial", "emoji": "📼"},
 }
 DEFAULT_MODE = "normal"
 
 
 def gifs_for_mode(mode: str) -> tuple[dict, ...]:
-    """The cards this mode plays with."""
-    wanted = MODES.get(mode, MODES[DEFAULT_MODE])["ratings"]
-    return tuple(g for g in load_gifs() if g.get("rating", "sfw") in wanted)
+    """The cards this mode plays with. A card can belong to more than one mode."""
+    wanted = mode if mode in MODES else DEFAULT_MODE
+    return tuple(g for g in load_gifs() if wanted in g["sets"])
 
 
 def mode_counts() -> dict[str, int]:

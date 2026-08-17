@@ -8,178 +8,137 @@
   <link rel="stylesheet" href="/static/css/theme.css">
   <link rel="stylesheet" href="/static/css/base.css">
   <style>
-    /* The curator borrows the game's tokens so kept GIFs are judged in the same
-       colours, at roughly the size they'll appear on a card. */
+    /* Borrowed from the game's tokens, so a GIF is judged in the colours and at roughly
+       the size it will have on a card. */
     body { min-height: 100vh; }
-    .curate {
-      max-width: 860px;
-      margin: 0 auto;
-      padding: 18px 18px 40px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .curate__head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      flex-wrap: wrap;
-    }
-    .curate__title { font-family: var(--gn-font-display); font-size: 1.5rem; }
-    .curate__title small {
-      display: block;
-      font-family: var(--gn-font-body);
-      font-size: .78rem;
-      text-transform: uppercase;
-      letter-spacing: var(--gn-track-label);
-      color: var(--gn-ink-dim);
-    }
-    .tally { display: flex; gap: 8px; flex-wrap: wrap; }
-    .tally span {
-      display: inline-flex;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 3px;
-      overflow: hidden;          /* keep the progress bar inside the pill */
-      padding: 5px 12px 6px;
-      border: var(--gn-outline-sm) solid var(--gn-outline-color);
-      border-radius: var(--gn-radius-pill);
-      background: var(--gn-bg-2);
-      font-size: .82rem;
-      font-weight: 800;
-    }
-    .tally b { font-family: var(--gn-font-display); }
-    .tally .kept { background: var(--gn-accent-3); color: var(--gn-accent-3-ink); }
-    .tally .adult { background: var(--gn-accent-2); color: var(--gn-accent-2-ink); }
-    .tally .millennial { background: var(--gn-accent-1); color: var(--gn-accent-1-ink); }
-    .tally .ingame { background: var(--gn-accent-4); color: var(--gn-accent-4-ink); }
+    .curate { max-width: 1000px; margin: 0 auto; padding: 14px 16px 28px; display: flex; flex-direction: column; gap: 12px; }
 
-    .stage {
-      position: relative;
-      display: grid;
-      place-items: center;
-      min-height: 46vh;
-      padding: 14px;
-      border: var(--gn-outline-lg) solid var(--gn-outline-color);
-      border-radius: var(--gn-radius);
-      background: var(--gn-bg-well);
-      box-shadow: var(--gn-shadow-lg);
-      overflow: hidden;
+    .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .brand { font-family: var(--gn-font-display); font-size: 1.15rem; white-space: nowrap; }
+    .brand small {
+      display: block; font-family: var(--gn-font-body); font-size: .68rem;
+      text-transform: uppercase; letter-spacing: var(--gn-track-label); color: var(--gn-ink-dim);
     }
-    /* Framed exactly like a card in the game, so what you see is what you get. */
+    .tally { display: flex; gap: 7px; flex-wrap: wrap; }
+    .pill {
+      display: inline-flex; flex-direction: column; gap: 3px; overflow: hidden;
+      padding: 5px 11px 6px; border: var(--gn-outline-sm) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-pill); background: var(--gn-bg-2);
+      font-size: .78rem; font-weight: 800; white-space: nowrap;
+    }
+    .pill b { font-family: var(--gn-font-display); }
+    .pill--normal { background: var(--gn-accent-3); color: var(--gn-accent-3-ink); }
+    .pill--adult { background: var(--gn-accent-2); color: var(--gn-accent-2-ink); }
+    .pill--millennial { background: var(--gn-accent-1); color: var(--gn-accent-1-ink); }
+    .meter { display: block; width: 100%; height: 5px; border-radius: 3px; background: rgba(0,0,0,.24); overflow: hidden; }
+    .meter i { display: block; height: 100%; background: currentColor; opacity: .8; }
+
+    /* search + discovery */
+    .find { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .find input {
+      flex: 1 1 220px; min-width: 0; padding: 10px 14px;
+      border: var(--gn-outline) solid var(--gn-outline-color); border-radius: var(--gn-radius-pill);
+      background: var(--gn-surface); color: var(--gn-surface-ink);
+      font-family: var(--gn-font-body); font-weight: 800; font-size: 1rem;
+    }
+    .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tag {
+      padding: 5px 11px; border: var(--gn-outline-sm) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-pill); background: var(--gn-bg-3); color: var(--gn-ink);
+      font-size: .78rem; font-weight: 800; cursor: pointer;
+    }
+    .tag:hover { background: var(--gn-accent-4); color: var(--gn-accent-4-ink); }
+    .tag--live { background: var(--gn-accent-4); color: var(--gn-accent-4-ink); }
+
+    /* the GIF */
+    .stage {
+      position: relative; display: grid; place-items: center; min-height: 42vh; padding: 12px;
+      border: var(--gn-outline-lg) solid var(--gn-outline-color); border-radius: var(--gn-radius);
+      background: var(--gn-bg-well); box-shadow: var(--gn-shadow-lg); overflow: hidden;
+    }
     .card {
-      width: min(100%, 520px);
-      aspect-ratio: 4 / 3;
-      border: var(--gn-outline) solid var(--gn-outline-color);
-      border-radius: var(--gn-radius-sm);
-      background: #000;
-      box-shadow: var(--gn-shadow);
-      overflow: hidden;
+      width: min(100%, 560px); aspect-ratio: 4 / 3; overflow: hidden;
+      border: var(--gn-outline) solid var(--gn-outline-color); border-radius: var(--gn-radius-sm);
+      background: #000; box-shadow: var(--gn-shadow);
     }
     .card img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .caption {
-      margin-top: 10px;
-      text-align: center;
-      color: var(--gn-ink-dim);
-      font-size: .88rem;
-      min-height: 1.2em;
-    }
-    .caption b { color: var(--gn-ink); }
+    .stage--drop { outline: 4px dashed var(--gn-accent-3); outline-offset: -10px; }
+    .meta { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; color: var(--gn-ink-dim); font-size: .85rem; min-height: 1.3em; margin-top: 8px; }
+    .meta b { color: var(--gn-ink); }
+    .meta .chip { padding: 2px 9px; border-radius: var(--gn-radius-pill); background: rgba(0,0,0,.3); font-size: .75rem; }
+    .pos { font-variant-numeric: tabular-nums; }
 
-    .verdicts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    @media (min-width: 720px) { .verdicts { grid-template-columns: repeat(4, 1fr); } }
-    .verdicts .btn { width: 100%; flex-direction: column; gap: 2px; padding: 15px 10px; }
-    .verdicts .btn kbd {
-      font-family: var(--gn-font-body);
-      font-size: .68rem;
-      font-weight: 800;
-      opacity: .7;
-      letter-spacing: .06em;
-    }
-    .btn--skip { background: var(--gn-bg-3); color: var(--gn-ink); }
-    .btn--adult { background: var(--gn-accent-2); color: var(--gn-accent-2-ink); }
-    .btn--millennial { background: var(--gn-accent-1); color: var(--gn-accent-1-ink); }
-    .bar {
-      display: block;
-      width: 100%;
-      height: 6px;
-      border-radius: 3px;
-      background: rgba(0, 0, 0, .22);
-      overflow: hidden;
-    }
-    .bar i { display: block; height: 100%; background: currentColor; opacity: .75; }
+    /* controls */
+    .rowbtns { display: grid; grid-template-columns: auto 1fr 1fr 1fr auto; gap: 10px; align-items: stretch; }
+    @media (max-width: 700px) { .rowbtns { grid-template-columns: 1fr 1fr; } }
+    .btn kbd { font-family: var(--gn-font-body); font-size: .66rem; font-weight: 800; opacity: .72; letter-spacing: .06em; }
+    .verdict { flex-direction: column; gap: 2px; padding: 14px 8px; }
+    /* Off = outline only, on = filled. A GIF can be in several sets at once. */
+    .verdict[aria-pressed="false"] { background: transparent; color: var(--gn-ink); border-color: var(--gn-ink-dim); box-shadow: none; }
+    .verdict[aria-pressed="true"]::before { content: '✓ '; }
+    .v-normal[aria-pressed="true"] { background: var(--gn-accent-3); color: var(--gn-accent-3-ink); }
+    .v-adult[aria-pressed="true"] { background: var(--gn-accent-2); color: var(--gn-accent-2-ink); }
+    .v-millennial[aria-pressed="true"] { background: var(--gn-accent-1); color: var(--gn-accent-1-ink); }
+    .nav { padding: 14px 18px; }
 
-    .row { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-    .hint { color: var(--gn-ink-dim); font-size: .82rem; }
+    .foot { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .hint { color: var(--gn-ink-dim); font-size: .8rem; }
     .flash {
-      position: fixed;
-      left: 50%;
-      top: 16px;
-      transform: translateX(-50%);
-      padding: 10px 18px;
-      border: var(--gn-outline) solid var(--gn-outline-color);
-      border-radius: var(--gn-radius-pill);
-      background: var(--gn-surface);
-      color: var(--gn-surface-ink);
-      font-family: var(--gn-font-display);
-      box-shadow: var(--gn-shadow);
-      opacity: 0;
-      transition: opacity 200ms ease;
-      z-index: 50;
-      pointer-events: none;
+      position: fixed; left: 50%; top: 14px; transform: translateX(-50%);
+      padding: 9px 16px; border: var(--gn-outline) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-pill); background: var(--gn-surface); color: var(--gn-surface-ink);
+      font-family: var(--gn-font-display); box-shadow: var(--gn-shadow);
+      opacity: 0; transition: opacity 180ms ease; z-index: 60; pointer-events: none;
     }
     .flash--on { opacity: 1; }
     .flash--bad { background: var(--gn-danger); color: var(--gn-danger-ink); }
     .problem {
-      padding: 12px 16px;
-      border: var(--gn-outline) solid var(--gn-outline-color);
-      border-radius: var(--gn-radius-sm);
-      background: var(--gn-danger);
-      color: var(--gn-danger-ink);
-      font-weight: 800;
+      padding: 10px 14px; border: var(--gn-outline) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-sm); background: var(--gn-danger); color: var(--gn-danger-ink); font-weight: 800;
     }
     .problem:empty { display: none; }
     .preload { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
   </style>
 </head>
 <body>
-  <main class="curate">
-    <header class="curate__head">
-      <h1 class="curate__title">
-        🃏 GIF curator
-        <small>{{ source }} · rating {{ rating }}</small>
+  <main class="curate" id="curate">
+    <div class="bar">
+      <h1 class="brand">🃏 GIF curator
+        <small>{{ source }} · rating {{ rating }} · ≥{{ min_frames }} frames</small>
       </h1>
       <div class="tally" id="tally"></div>
-    </header>
+    </div>
 
     <p class="problem" id="problem"></p>
+
+    <div class="find">
+      <input id="search" type="search" placeholder="Search anything — nuke, deep fried, cursed…" autocomplete="off" spellcheck="false">
+      <button class="btn btn--tiny" data-action="search" type="button">Go</button>
+      <button class="btn btn--tiny btn--ghost" data-action="shuffle" type="button">Whole pack</button>
+      <button class="btn btn--tiny btn--ghost" data-action="related" type="button">Related to this <kbd>R</kbd></button>
+    </div>
+    <div class="tags" id="tags"></div>
 
     <section>
       <div class="stage" id="stage">
         <div class="card"><img id="gif" alt="candidate GIF"></div>
       </div>
-      <p class="caption" id="caption"></p>
+      <p class="meta" id="meta"></p>
     </section>
 
-    <section class="verdicts">
-      <button class="btn btn--skip" data-verdict="skip" type="button">
-        Skip <kbd>← or A</kbd>
+    <section class="rowbtns">
+      <button class="btn nav btn--ghost" data-action="prev" type="button">← <kbd>Back</kbd></button>
+      {% for name, meta in sets.items() %}
+      <button class="btn verdict v-{{ name }}" data-set="{{ name }}" aria-pressed="false" type="button">
+        {{ meta.label }} <kbd>{{ meta.key }}</kbd>
       </button>
-      <button class="btn btn--go" data-verdict="keep" type="button">
-        Normal <kbd>→ or D</kbd>
-      </button>
-      <button class="btn btn--adult" data-verdict="adult" type="button">
-        18+ <kbd>↑ or W</kbd>
-      </button>
-      <button class="btn btn--millennial" data-verdict="millennial" type="button">
-        Millennial <kbd>↓ or S</kbd>
-      </button>
+      {% endfor %}
+      <button class="btn nav btn--go" data-action="next" type="button">→ <kbd>Next</kbd></button>
     </section>
 
-    <div class="row">
-      <button class="btn btn--tiny btn--ghost" data-action="undo" type="button">Undo <kbd>U</kbd></button>
-      <span class="hint">Kept GIFs land in <code>app/static/gifs/</code> and the game's manifest right away.</span>
+    <div class="foot">
+      <button class="btn btn--tiny btn--ghost" data-action="clear" type="button">Remove from all sets <kbd>X</kbd></button>
+      <span class="hint">Drag your own GIFs anywhere on this page · tagged GIFs land in <code>app/static/gifs/</code></span>
       <button class="btn btn--tiny btn--danger" data-action="drop-filler" type="button">Delete the 80 placeholders</button>
     </div>
 
@@ -191,15 +150,16 @@
 <script>
 (() => {
   'use strict';
-  const gif = document.getElementById('gif');
-  const caption = document.getElementById('caption');
-  const tally = document.getElementById('tally');
-  const problem = document.getElementById('problem');
-  const flashEl = document.getElementById('flash');
-  const preload = document.getElementById('preload');
+  const SETS = {{ sets | tojson }};
+  const STARTERS = {{ queries | tojson }};   // a few search terms to get going
+  const el = (id) => document.getElementById(id);
+  const gif = el('gif'), meta = el('meta'), tally = el('tally'), problem = el('problem');
+  const flashEl = el('flash'), preload = el('preload'), tags = el('tags'), search = el('search');
 
-  let queue = [];
-  let current = null;
+  let history = [];      // everything shown this session, in order
+  let index = -1;        // where we are in it
+  let liveQuery = null;  // pinned search term, if any
+  let relatedTags = [];
   let busy = false;
 
   function flash(text, bad) {
@@ -207,72 +167,137 @@
     flashEl.classList.toggle('flash--bad', !!bad);
     flashEl.classList.add('flash--on');
     clearTimeout(flash.timer);
-    flash.timer = setTimeout(() => flashEl.classList.remove('flash--on'), 1100);
+    flash.timer = setTimeout(() => flashEl.classList.remove('flash--on'), 1000);
   }
 
   function renderCounts(counts) {
     if (!counts) return;
-    // A mode needs `target` cards before eight people can play it, so show progress.
-    const bar = (n) => '<span class="bar"><i style="width:' +
+    const meter = (n) => '<span class="meter"><i style="width:' +
       Math.min(100, Math.round(100 * n / counts.target)) + '%"></i></span>';
-    tally.innerHTML =
-      '<span class="kept">normal <b>' + counts.normal + '</b>/' + counts.target + bar(counts.normal) + '</span>' +
-      '<span class="adult">18+ <b>' + counts.adult + '</b>/' + counts.target + bar(counts.adult) + '</span>' +
-      '<span class="millennial">millennial <b>' + counts.millennial + '</b>/' + counts.target + bar(counts.millennial) + '</span>' +
-      '<span>skipped <b>' + counts.skipped + '</b></span>';
+    tally.innerHTML = Object.keys(SETS).map((name) => {
+      const n = counts.sets[name] || 0;
+      return '<span class="pill pill--' + name + '">' + SETS[name].label.toLowerCase() +
+        ' <b>' + n + '</b>/' + counts.target + meter(n) + '</span>';
+    }).join('') + '<span class="pill">seen <b>' + counts.seen + '</b></span>';
   }
 
-  async function fill() {
-    const response = await fetch('/api/next?n=5');
+  function current() { return history[index] || null; }
+
+  function paint() {
+    const c = current();
+    document.querySelectorAll('[data-set]').forEach((b) => {
+      const on = !!c && (c.sets || []).indexOf(b.dataset.set) !== -1;
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    if (!c) {
+      gif.removeAttribute('src');
+      meta.innerHTML = '<b>Nothing queued.</b> Try a search, or check the error above.';
+      return;
+    }
+    if (gif.getAttribute('src') !== c.preview) gif.src = c.preview;
+    meta.innerHTML =
+      '<b>' + (c.title || '(untitled)').replace(/[<>&]/g, '') + '</b>' +
+      '<span class="chip">' + (c.local ? 'your file' : 'found under “' + String(c.query).replace(/[<>&]/g, '') + '”') + '</span>' +
+      (c.frames ? '<span class="chip">' + c.frames + ' frames</span>' : '') +
+      '<span class="chip pos">' + (index + 1) + ' / ' + history.length + '</span>';
+    // keep the next few warm so scrolling is instant
+    preload.innerHTML = history.slice(index + 1, index + 4)
+      .map((n) => '<img src="' + n.preview + '" alt="">').join('');
+  }
+
+  async function fill(n) {
+    const response = await fetch('/api/next?n=' + (n || 6));
     const data = await response.json();
     renderCounts(data.counts);
     problem.textContent = data.error || '';
-    queue = queue.concat(data.candidates || []);
-    // Warm the next few so they appear instantly.
-    preload.innerHTML = queue.slice(0, 4)
-      .map(c => '<img src="' + c.preview + '" alt="">').join('');
+    liveQuery = data.query;
+    history = history.concat(data.candidates || []);
+    return (data.candidates || []).length;
   }
 
-  function show(candidate) {
-    current = candidate;
-    if (!candidate) {
-      gif.removeAttribute('src');
-      caption.innerHTML = '<b>Out of candidates.</b> If there is an error above, fix it and reload; otherwise wait a moment and press any key.';
-      return;
+  async function go(step) {
+    const leaving = current();
+    if (step > 0 && index + 3 >= history.length) {
+      try { await fill(6); } catch (e) { problem.textContent = String(e); }
     }
-    gif.src = candidate.preview;
-    const title = candidate.title || '(untitled)';
-    caption.innerHTML = '<b>' + title.replace(/[<>&]/g, '') + '</b> · found under “' + candidate.query + '”';
+    const target = index + step;
+    if (target < 0) { flash('Start of the list'); return; }
+    if (target >= history.length) { flash('Nothing more yet — try again'); return; }
+    index = target;
+    paint();
+    // Scrolling past something counts as having seen it, so it won't come round again
+    // tomorrow. Tagged ones are remembered anyway.
+    if (step > 0 && leaving && !(leaving.sets || []).length) {
+      fetch('/api/seen', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                          body: JSON.stringify({candidate: leaving})}).catch(() => {});
+    }
   }
 
-  async function next() {
-    if (queue.length < 3) { try { await fill(); } catch (e) { problem.textContent = String(e); } }
-    show(queue.shift() || null);
-  }
-
-  async function decide(verdict) {
-    if (busy || !current) return;
+  async function toggle(setName) {
+    const c = current();
+    if (!c || busy) return;
     busy = true;
-    const candidate = current;
-    // Move on immediately; the save happens behind us so swiping never stalls.
-    await next();
+    const before = (c.sets || []).slice();
+    const sets = before.slice();
+    const at = sets.indexOf(setName);
+    if (at === -1) sets.push(setName); else sets.splice(at, 1);
+    c.sets = sets;              // optimistic, so the buttons respond instantly
+    paint();
     try {
-      const response = await fetch('/api/decide', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({verdict: verdict, candidate: candidate}),
+      const response = await fetch('/api/sets', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({candidate: c, sets: sets}),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'save failed');
+      c.sets = data.sets;
       renderCounts(data.counts);
-      if (verdict === 'keep') flash('Normal 🙂');
-      if (verdict === 'adult') flash('18+ 🌶️');
-      if (verdict === 'millennial') flash('Millennial 📼');
+      flash(sets.length ? 'In: ' + sets.map((s) => SETS[s].label).join(' + ') : 'Removed');
     } catch (err) {
+      c.sets = before;           // put it back if the server refused
       flash(String(err.message || err), true);
     } finally {
       busy = false;
+      paint();
     }
+  }
+
+  async function clearSets() {
+    const c = current();
+    if (!c) return;
+    for (const s of (c.sets || []).slice()) await toggle(s);
+  }
+
+  async function pin(query) {
+    await fetch('/api/query', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                              body: JSON.stringify({query: query})});
+    liveQuery = query || null;
+    search.value = query || '';
+    const added = await fill(6);
+    if (added) { index = history.length - added; paint(); }
+    else { flash('No results for that', true); }
+    drawTags();
+  }
+
+  function drawTags() {
+    const chips = (relatedTags.length ? relatedTags : STARTERS).map((t) =>
+      '<button class="tag' + (t === liveQuery ? ' tag--live' : '') + '" data-tag="' + t.replace(/"/g, '') + '" type="button">' + t + '</button>');
+    tags.innerHTML = (liveQuery
+      ? '<button class="tag tag--live" data-tag="" type="button">✕ ' + liveQuery + '</button>'
+      : '') + chips.join('');
+  }
+
+  async function showRelated() {
+    const c = current();
+    if (!c) { flash('Nothing to go on', true); return; }
+    const term = (c.query && c.query !== 'trending' && !c.local) ? c.query : '';
+    const url = '/api/related?term=' + encodeURIComponent(term) + '&title=' + encodeURIComponent(c.title || '');
+    const data = await (await fetch(url)).json();
+    relatedTags = (data.tags && data.tags.length) ? data.tags : (data.fallback || []);
+    drawTags();
+    flash(relatedTags.length
+      ? (data.tags.length ? 'Related to “' + data.term + '”' : 'Try these words')
+      : 'Nothing to suggest for that one', !relatedTags.length);
   }
 
   async function post(path, okText) {
@@ -283,26 +308,72 @@
     flash(okText.replace('%n', data.removed));
   }
 
+  // --- input -------------------------------------------------------------
   document.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-verdict], [data-action]');
-    if (!button) return;
-    if (button.dataset.verdict) decide(button.dataset.verdict);
-    else if (button.dataset.action === 'undo') post('/api/undo', 'Undone');
-    else if (button.dataset.action === 'drop-filler') post('/api/drop-filler', 'Deleted %n placeholders');
+    const hit = event.target.closest('[data-set], [data-action], [data-tag]');
+    if (!hit) return;
+    if (hit.dataset.set) return void toggle(hit.dataset.set);
+    if (hit.dataset.tag !== undefined) return void pin(hit.dataset.tag);
+    switch (hit.dataset.action) {
+      case 'next': go(1); break;
+      case 'prev': go(-1); break;
+      case 'clear': clearSets(); break;
+      case 'search': pin(search.value.trim()); break;
+      case 'shuffle': pin(''); break;
+      case 'related': showRelated(); break;
+      case 'drop-filler': post('/api/drop-filler', 'Deleted %n placeholders'); break;
+    }
+  });
+
+  search.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') { event.preventDefault(); pin(search.value.trim()); search.blur(); }
+    event.stopPropagation();
   });
 
   document.addEventListener('keydown', (event) => {
+    if (event.target === search) return;
     const key = event.key.toLowerCase();
-    if (key === 'arrowright' || key === 'd') { event.preventDefault(); decide('keep'); }
-    else if (key === 'arrowleft' || key === 'a') { event.preventDefault(); decide('skip'); }
-    else if (key === 'arrowup' || key === 'w') { event.preventDefault(); decide('adult'); }
-    else if (key === 'arrowdown' || key === 's') { event.preventDefault(); decide('millennial'); }
-    else if (key === 'u') { event.preventDefault(); post('/api/undo', 'Undone'); }
-    else if (!current) next();
+    if (key === 'arrowright') { event.preventDefault(); go(1); }
+    else if (key === 'arrowleft') { event.preventDefault(); go(-1); }
+    else if (key === 'n') { event.preventDefault(); toggle('normal'); }
+    else if (key === 'e') { event.preventDefault(); toggle('adult'); }
+    else if (key === 'm') { event.preventDefault(); toggle('millennial'); }
+    else if (key === 'x') { event.preventDefault(); clearSets(); }
+    else if (key === 'r') { event.preventDefault(); showRelated(); }
+    else if (key === '/') { event.preventDefault(); search.focus(); search.select(); }
+  });
+
+  // --- drag in your own --------------------------------------------------
+  const stage = el('stage');
+  ['dragenter', 'dragover'].forEach((type) => document.addEventListener(type, (event) => {
+    event.preventDefault();
+    stage.classList.add('stage--drop');
+  }));
+  document.addEventListener('dragleave', (event) => {
+    if (!event.relatedTarget) stage.classList.remove('stage--drop');
+  });
+  document.addEventListener('drop', async (event) => {
+    event.preventDefault();
+    stage.classList.remove('stage--drop');
+    const files = Array.from((event.dataTransfer && event.dataTransfer.files) || []);
+    if (!files.length) return;
+    const form = new FormData();
+    files.forEach((file) => form.append('files', file));
+    flash('Reading ' + files.length + ' file(s)…');
+    const data = await (await fetch('/api/import', {method: 'POST', body: form})).json();
+    renderCounts(data.counts);
+    if (data.skipped && data.skipped.length) flash('Skipped (not .gif): ' + data.skipped.join(', '), true);
+    if (data.candidates && data.candidates.length) {
+      // Slot them in right after where we are, so they can be tagged straight away.
+      history.splice(index + 1, 0, ...data.candidates);
+      go(1);
+      flash('Yours — press N / E / M to file it');
+    }
   });
 
   renderCounts({{ counts | tojson }});
-  next();
+  drawTags();   // starter terms are visible immediately, so there's always somewhere to go
+  (async () => { await fill(6); index = 0; paint(); })();
 })();
 </script>
 </body>

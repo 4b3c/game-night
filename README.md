@@ -96,11 +96,24 @@ export GIPHY_API_KEY=xxxxxxxx        # developers.giphy.com -> Create an App -> 
 python scripts/curate_gifs.py        # then open http://127.0.0.1:5099
 ```
 
-One GIF at a time, framed exactly as it'll appear on a card. `→` keeps it for Normal, `↑`
-for 18+, `↓` for Millennial, `←` skips, `U` undoes. Keeps are downloaded into
-`app/static/gifs/` and tagged in the manifest immediately, so they're in the game the next
-time it starts. Decisions are remembered in `curation/decisions.json` — nothing you've
-judged comes back, and you can stop and resume whenever.
+`←` `→` scroll through GIFs; **N**, **E**, **M** toggle membership of Normal, Eighteen+ and
+Millennial. A GIF can be in several sets at once, so a cursed one can be both Normal and
+18+. `X` removes it from everything, and tagging is reversible — untagging deletes the file
+again. Tagged GIFs land in `app/static/gifs/` and the manifest immediately, so they're in
+the game next time it starts. Scrolling past something remembers it as seen, so it won't
+come round again tomorrow (`curation/decisions.json`).
+
+**Finding the weird stuff.** Type anything in the search box (`nuke`, `deep fried`,
+`cursed`) and the queue switches to it. Press **R** on a GIF you like for related tags —
+Giphy's suggestions where it has them, the GIF's own title words where it doesn't — and
+click one to keep pulling that thread. Starter terms are on screen from the start; the
+built-in packs are `reactions`, `cursed`, `millennial` and `chaos` (`--pack cursed`).
+
+**Your own GIFs** — drag files onto the page. The ones you already collected in Discord get
+copied in and tagged like anything else.
+
+**Near-stills are filtered out** before you see them: Giphy reports a frame count and
+anything under `--min-frames` (default 10) never appears.
 
 ```bash
 python scripts/curate_gifs.py --source tenor              # Tenor instead of Giphy
@@ -109,7 +122,7 @@ python scripts/curate_gifs.py --queries "facepalm,oops"   # your own search term
 ```
 
 A mode needs **56 cards** before eight people can play it (28 for four); the lobby greys out
-modes that aren't ready and the curator shows a progress bar for each. There's a button to
+modes that aren't ready and the curator shows a progress meter for each. There's a button to
 delete the 80 placeholders once you've got real ones.
 
 Curated GIFs are gitignored on purpose — they came from someone else's API and this repo is
