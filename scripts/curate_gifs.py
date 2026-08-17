@@ -698,6 +698,9 @@ def build_app(library: Library, source, password: str) -> Flask:
             source=source.name,
             rating=getattr(source, "rating", ""),
             sets=SETS,
+            # Explicitly, because Flask's JSON provider sorts keys — relying on the dict
+            # would put the buttons in the order 18+ / Millennial / Normal.
+            set_order=list(SETS),
             counts=library.counts(),
         )
 

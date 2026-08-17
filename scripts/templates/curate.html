@@ -190,6 +190,7 @@
 (() => {
   'use strict';
   const SETS = {{ sets | tojson }};
+  const SET_ORDER = {{ set_order | tojson }};   // Normal, 18+, Millennial — in that order
   const GIF_BASE = {{ url_for('static', filename='gifs/') | tojson }};
   // Absolute, not relative. Reached as /curate (no trailing slash) a relative "api/next"
   // resolves against the parent and lands on the *game*, which answers with HTML — so
@@ -224,7 +225,7 @@
     if (!counts) return;
     const meter = (n) => '<span class="meter"><i style="width:' +
       Math.min(100, Math.round(100 * n / counts.target)) + '%"></i></span>';
-    tally.innerHTML = Object.keys(SETS).map((name) => {
+    tally.innerHTML = SET_ORDER.map((name) => {
       const n = counts.sets[name] || 0;
       return '<span class="pill pill--' + name + '">' + SETS[name].label.toLowerCase() +
         ' <b>' + n + '</b>/' + counts.target + meter(n) + '</span>';
@@ -233,7 +234,6 @@
 
   // --- tabs ---------------------------------------------------------------
   function showTab(which) {
-    tab = which;
     document.querySelectorAll('[data-tab]').forEach((b) =>
       b.setAttribute('aria-selected', b.dataset.tab === which ? 'true' : 'false'));
     el('panel-library').hidden = which !== 'library';
@@ -259,7 +259,7 @@
         '" title="Not funny — never offer it again" type="button">✕</button>' +
       '<figcaption class="item__name" title="' + esc(c.title) + '">' + esc(c.title || '(untitled)') + '</figcaption>' +
       '<div class="item__sets">' +
-        Object.keys(SETS).map((n) =>
+        SET_ORDER.map((n) =>
           '<button class="chipbtn chipbtn--' + n + '" data-' + (kind === 'library' ? 'card' : 'result') +
           '-set="' + esc(c.source_id) + '" data-set-name="' + n + '" aria-pressed="' +
           (c.sets.indexOf(n) !== -1) + '" type="button">' + SETS[n].label + '</button>').join('') +
@@ -270,12 +270,12 @@
   // --- the library --------------------------------------------------------
   function drawFilters() {
     const counts = {all: cards.length, ignored: ignoredCards.length};
-    Object.keys(SETS).forEach((n) => { counts[n] = cards.filter((c) => c.sets.indexOf(n) !== -1).length; });
+    SET_ORDER.forEach((n) => { counts[n] = cards.filter((c) => c.sets.indexOf(n) !== -1).length; });
     const one = (key, label) =>
       '<button class="filter" data-filter="' + key + '" aria-pressed="' + (filter === key) +
       '" type="button">' + label + ' <b>' + counts[key] + '</b></button>';
     filters.innerHTML = one('all', 'Everything') +
-      Object.keys(SETS).map((n) => one(n, SETS[n].label)).join('') +
+      SET_ORDER.map((n) => one(n, SETS[n].label)).join('') +
       one('ignored', 'Rejected');
   }
 
