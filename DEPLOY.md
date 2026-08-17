@@ -157,8 +157,8 @@ GAH_HOST=root@your-server ./scripts/push_gifs.sh
 ```
 
 It rsyncs `app/static/gifs/` (GIFs + manifest) and restarts the container. The override
-file is gitignored, so `git pull` won't fight it. Aim for 56 GIFs per mode — eight players
-hold 56 cards at once, and the lobby greys out modes that aren't there yet.
+file is gitignored, so `git pull` won't fight it. Aim for 56 GIFs in the Normal pile —
+eight players hold 56 cards at once, and the lobby disables Start until they're there.
 
 Prompts travel in git too, in `curation/prompts.json` — but they no longer need a deploy
 to change: the curator writes that file and the game re-reads it when it changes, so a

@@ -1,4 +1,4 @@
-"""The prompt half of the deck: the store, the curator's routes, and mode filtering.
+"""The prompt half of the deck: the store, the curator's routes, and which pile is dealt.
 
 Every test here runs against a temporary curation/ folder, so nothing touches the real
 deck. The curator app is built directly rather than through main(), which wants API keys
@@ -34,8 +34,8 @@ def state(tmp_path, monkeypatch):
     store.update_prompts(
         lambda rows: rows.update(
             {
-                "p001": {"text": "Normal only ___.", "blanks": 1, "sets": ["normal"], "added": "x"},
-                "p002": {"text": "Everywhere ___.", "blanks": 1, "sets": list(curator.SETS), "added": "x"},
+                "p001": {"text": "Clean one ___.", "blanks": 1, "sets": ["normal"], "added": "x"},
+                "p002": {"text": "Filthy one ___.", "blanks": 1, "sets": ["adult"], "added": "x"},
                 "p003": {"text": "Retired ___.", "blanks": 1, "sets": [], "added": "x"},
             }
         )
@@ -95,7 +95,7 @@ def test_put_prompt_keeps_the_original_added_stamp(state):
 def test_prompts_route_lists_everything_with_counts(client):
     data = client.get("/api/prompts").get_json()
     assert [p["id"] for p in data["prompts"]] == ["p001", "p002", "p003"]
-    assert data["counts"] == {"normal": 2, "adult": 1, "millennial": 1, "all": 3}
+    assert data["counts"] == {"normal": 1, "adult": 1, "all": 3}
 
 
 def test_saving_without_an_id_creates_one(client):
@@ -176,28 +176,30 @@ def rows(n: int, sets: list[str], start: int = 1) -> dict:
     return {f"p{i:03d}": {"text": f"Number {i} ___.", "sets": sets} for i in range(start, start + n)}
 
 
-def test_a_prompt_plays_only_in_its_own_modes(deck):
+def test_the_adult_pile_tops_up_the_clean_one(deck):
+    """Dirty is clean plus 18+, not instead of it — a prompt tagged Normal is in both."""
     D, write = deck
     write({**rows(10, ["normal"]), **rows(4, ["adult"], start=50)})
-    assert len(D.prompts_for_mode("normal")) == 10
-    assert len(D.prompts_for_mode("adult")) == 4
-    assert D.prompt_counts()["millennial"] == 0
+    assert len(D.prompts_for(clean=True)) == 10
+    assert len(D.prompts_for(clean=False)) == 14
+    assert {p["id"] for p in D.prompts_for(True)} < {p["id"] for p in D.prompts_for(False)}
 
 
-def test_a_prompt_in_no_set_plays_nowhere_but_stays_readable(deck):
+def test_a_prompt_in_no_pile_plays_nowhere_but_stays_readable(deck):
     """Untagging is how a prompt is retired. A round already showing it must still be
     able to look it up, so it leaves the deck without leaving the index."""
     D, write = deck
     write({**rows(10, ["normal"]), "p999": {"text": "Retired ___.", "sets": []}})
-    assert "p999" not in {p["id"] for p in D.prompts_for_mode("normal")}
+    assert "p999" not in {p["id"] for p in D.prompts_for(clean=True)}
+    assert "p999" not in {p["id"] for p in D.prompts_for(clean=False)}
     assert D.prompt_index()["p999"]["text"] == "Retired ___."
 
 
-def test_the_deck_is_built_from_the_mode_it_was_asked_for(deck):
+def test_the_deck_is_built_from_the_side_of_the_switch_it_was_asked_for(deck):
     D, write = deck
     write({**rows(10, ["normal"]), **rows(4, ["adult"], start=50)})
-    assert len(D.build_prompt_deck(random.Random(1), "adult")) == 4
-    assert len(D.build_prompt_deck(random.Random(1), "normal")) == 10
+    assert len(D.build_prompt_deck(random.Random(1), clean=True)) == 10
+    assert len(D.build_prompt_deck(random.Random(1), clean=False)) == 14
 
 
 def test_an_edit_is_picked_up_without_a_restart(deck):
@@ -210,25 +212,22 @@ def test_an_edit_is_picked_up_without_a_restart(deck):
     assert len(D.load_prompts()) == 12
 
 
-def test_starting_a_mode_with_no_prompts_says_so(deck, monkeypatch):
+def test_starting_with_no_prompts_in_this_deck_says_so(deck, monkeypatch):
     from app.games.gah import engine as E
     from tests.test_engine import make_game
 
     D, write = deck
     monkeypatch.setattr(E, "build_prompt_deck", D.build_prompt_deck)
-    monkeypatch.setattr(E, "prompt_counts", D.prompt_counts)
+    monkeypatch.setattr(E, "deck_counts", D.deck_counts)
 
-    # Normal is the only mode with a full set of GIFs in the real manifest, so tag the
-    # prompts away from it: that isolates the prompt check from the GIF one, which runs
-    # first and would otherwise be the thing complaining.
+    # Tag every prompt 18+ so the clean deck has none. The GIF check runs first and
+    # passes on the real library, which is what isolates the prompt check here.
     write(rows(10, ["adult"]))
     game, _ = make_game(4)
-    game.options.mode = "normal"
     with pytest.raises(E.ActionError, match="prompts"):
         game.start_game("p0")
 
-    write(rows(10, ["normal"]))
-    game, _ = make_game(4)
-    game.options.mode = "normal"
-    game.start_game("p0")  # and the happy path still works
+    # Turning the switch off is enough — the same prompts are suddenly in the deck.
+    game.set_options("p0", {"clean": False})
+    game.start_game("p0")
     assert game.phase is not E.Phase.LOBBY

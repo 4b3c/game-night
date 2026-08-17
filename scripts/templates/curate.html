@@ -29,7 +29,6 @@
     .pill b { font-family: var(--gn-font-display); }
     .pill--normal { background: var(--gn-accent-3); color: var(--gn-accent-3-ink); }
     .pill--adult { background: var(--gn-accent-2); color: var(--gn-accent-2-ink); }
-    .pill--millennial { background: var(--gn-accent-1); color: var(--gn-accent-1-ink); }
     .meter { display: block; width: 100%; height: 5px; border-radius: 3px; background: rgba(0,0,0,.24); overflow: hidden; }
     .meter i { display: block; height: 100%; background: currentColor; opacity: .8; }
 
@@ -79,7 +78,6 @@
     .chipbtn[aria-pressed="true"] { border-color: var(--gn-outline-color); }
     .chipbtn--normal[aria-pressed="true"] { background: var(--gn-accent-3); color: var(--gn-accent-3-ink); }
     .chipbtn--adult[aria-pressed="true"] { background: var(--gn-accent-2); color: var(--gn-accent-2-ink); }
-    .chipbtn--millennial[aria-pressed="true"] { background: var(--gn-accent-1); color: var(--gn-accent-1-ink); }
     .item__drop {
       position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; display: grid;
       place-items: center; border: var(--gn-outline-sm) solid var(--gn-outline-color);
@@ -228,7 +226,7 @@
         <div class="line__sets" id="newsets"></div>
         <button class="btn" data-action="add-prompt" type="button">Add</button>
       </div>
-      <p class="hint">New prompts go into the sets lit up above. Edit any line and it saves when you click away.</p>
+      <p class="hint">New prompts go into the pile lit up above. Edit any line and it saves when you click away.</p>
 
       <div class="filters" id="pfilters"></div>
       <div class="lines" id="lines"></div>
@@ -242,7 +240,7 @@
 (() => {
   'use strict';
   const SETS = {{ sets | tojson }};
-  const SET_ORDER = {{ set_order | tojson }};   // Normal, 18+, Millennial — in that order
+  const SET_ORDER = {{ set_order | tojson }};   // Normal, then 18+ — in that order
   const GIF_BASE = {{ url_for('static', filename='gifs/') | tojson }};
   // Absolute, not relative. Reached as /curate (no trailing slash) a relative "api/next"
   // resolves against the parent and lands on the *game*, which answers with HTML — so
@@ -264,7 +262,7 @@
   let offset = 0;
   let prompts = [];      // every prompt, whatever set it's in
   let pFilter = 'all';
-  let newSets = [SET_ORDER[0]];  // which sets a freshly written prompt lands in
+  let newSets = [SET_ORDER[0]];  // which pile a freshly written prompt lands in
   let promptsLoaded = false;
 
   const esc = (s) => String(s == null ? '' : s).replace(/[<>&"]/g, (c) =>
@@ -278,15 +276,22 @@
     flash.timer = setTimeout(() => flashEl.classList.remove('flash--on'), 1400);
   }
 
+  /**
+   * The tally: how full each pile is.
+   *
+   * Only Normal gets a meter. It's the deck every game deals from, so 56 is a target it
+   * has to hit; the 18+ pile tops that up when the host turns "keep it clean" off, so
+   * any number of them is a fine number.
+   */
   function renderCounts(counts) {
     if (!counts) return;
-    const meter = (n) => '<span class="meter"><i style="width:' +
-      Math.min(100, Math.round(100 * n / counts.target)) + '%"></i></span>';
-    tally.innerHTML = SET_ORDER.map((name) => {
-      const n = counts.sets[name] || 0;
-      return '<span class="pill pill--' + name + '">' + SETS[name].label.toLowerCase() +
-        ' <b>' + n + '</b>/' + counts.target + meter(n) + '</span>';
-    }).join('') + '<span class="pill">rejected <b>' + (counts.ignored || 0) + '</b></span>';
+    const normal = counts.sets.normal || 0;
+    const meter = '<span class="meter"><i style="width:' +
+      Math.min(100, Math.round(100 * normal / counts.target)) + '%"></i></span>';
+    tally.innerHTML =
+      '<span class="pill pill--normal">normal <b>' + normal + '</b>/' + counts.target + meter + '</span>' +
+      '<span class="pill pill--adult">18+ <b>' + (counts.sets.adult || 0) + '</b></span>' +
+      '<span class="pill">rejected <b>' + (counts.ignored || 0) + '</b></span>';
   }
 
   // --- tabs ---------------------------------------------------------------
@@ -381,7 +386,7 @@
       if (!sets.length) cards = cards.filter((c) => c.source_id !== sourceId);
       else if (card) { card.sets = data.sets; card.on_disk = true; }
       renderCounts(data.counts);
-      flash(sets.length ? 'In: ' + sets.map((s) => SETS[s].label).join(' + ') : 'Removed from the game');
+      flash(sets.length ? 'In: ' + SETS[sets[0]].label : 'Removed from the game');
     } catch (err) {
       if (card) card.sets = before;  // put it back if the server refused
       flash(String(err.message || err), true);
@@ -456,7 +461,7 @@
       showTab('discover');
       drawResults();
       foundEl.textContent = data.candidates.length + ' from your links — tag them below';
-      flash('Yours — now tag with N / E / M');
+      flash('Yours — now tag them');
     } else {
       flash('Nothing could be read from those', true);
     }
@@ -541,7 +546,7 @@
     drawPrompts();
     const saved = await savePrompt(id, row.text, sets);
     if (!saved) row.sets = before;   // put it back if the server refused
-    else flash(sets.length ? 'In: ' + sets.map((s) => SETS[s].label).join(' + ') : 'In no mode — retired');
+    else flash(sets.length ? 'In: ' + SETS[sets[0]].label : 'Retired — in no game');
     drawPromptFilters();
     drawPrompts();
   }
@@ -554,12 +559,12 @@
     drawPrompts();                   // re-renders from what the server actually stored
   }
 
-  /** Add however many lines are in the box, each into the sets lit up beside it. */
+  /** Add however many lines are in the box, each into the pile lit up beside it. */
   async function addPrompts() {
     const box = el('newprompt');
     const lines = box.value.split('\n').map((s) => s.trim()).filter(Boolean);
     if (!lines.length) { flash('Write something first', true); return; }
-    if (!newSets.length) { flash('Pick at least one set', true); return; }
+    if (!newSets.length) { flash('Pick a pile first', true); return; }
     let added = 0;
     for (const text of lines) {
       if (await savePrompt(null, text, newSets)) added++;
@@ -657,7 +662,7 @@
       c.sets = data.sets;
       c.known = true;
       renderCounts(data.counts);
-      flash(sets.length ? 'In: ' + sets.map((s) => SETS[s].label).join(' + ') : 'Removed');
+      flash(sets.length ? 'In: ' + SETS[sets[0]].label : 'Removed');
       loadLibrary();             // so the Library tab already agrees when you switch
     } catch (err) {
       c.sets = before;           // put it back if the server refused
@@ -668,12 +673,15 @@
     }
   }
 
-  /** Flip one set on a card in either grid. */
-  function toggled(current, name) {
-    const sets = (current || []).slice();
-    const at = sets.indexOf(name);
-    if (at === -1) sets.push(name); else sets.splice(at, 1);
-    return sets;
+  /**
+   * Pick a pile for a card or a prompt.
+   *
+   * The two are exclusive: Normal plays in every game and 18+ tops it up, so "in both"
+   * would just be a longer way of writing Normal. Tapping the lit one clears it — for a
+   * card that means out of the game, for a prompt it means retired but still on file.
+   */
+  function chosen(current, name) {
+    return (current || []).indexOf(name) === -1 ? [name] : [];
   }
 
   // --- input -------------------------------------------------------------
@@ -689,23 +697,23 @@
     if (hit.dataset.unignore) return void unignore(hit.dataset.unignore);
     if (hit.dataset.promptDrop) return void dropPrompt(hit.dataset.promptDrop, hit);
     if (hit.dataset.newset !== undefined && hit.dataset.setName) {
-      newSets = toggled(newSets, hit.dataset.setName);
+      newSets = [hit.dataset.setName];   // a radio group: one pile or the other
       drawNewSets();
       return;
     }
     if (hit.dataset.promptSet !== undefined && hit.dataset.setName) {
       const row = prompts.find((p) => p.id === hit.dataset.promptSet);
-      if (row) retagPrompt(row.id, toggled(row.sets, hit.dataset.setName));
+      if (row) retagPrompt(row.id, chosen(row.sets, hit.dataset.setName));
       return;
     }
     if (hit.dataset.cardSet !== undefined && hit.dataset.setName) {
       const card = cards.find((c) => c.source_id === hit.dataset.cardSet);
-      if (card) retag(card.source_id, toggled(card.sets, hit.dataset.setName));
+      if (card) retag(card.source_id, chosen(card.sets, hit.dataset.setName));
       return;
     }
     if (hit.dataset.resultSet !== undefined && hit.dataset.setName) {
       const found = results.find((c) => c.source_id === hit.dataset.resultSet);
-      if (found) tagResult(found.source_id, toggled(found.sets, hit.dataset.setName));
+      if (found) tagResult(found.source_id, chosen(found.sets, hit.dataset.setName));
       return;
     }
     switch (hit.dataset.action) {

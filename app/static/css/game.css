@@ -579,48 +579,57 @@ button.tcard:active { transform: scale(.98); }
   font-size: 1.2rem;
   letter-spacing: 0;
 }
-/* --- the mode picker: the first thing the host sees --------------------- */
-.modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.mode {
+/* --- the deck switch: the first thing the host sees ---------------------- */
+/* One control, not three buttons. There used to be a Normal / 18+ / Millennial picker
+   here; the deck is one deck now, and this decides whether the 18+ pile is mixed into
+   it. Big enough to hit with a thumb without reading anything. */
+.switchline {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 14px 6px 11px;
+  gap: 13px;
+  padding: 13px 15px;
   border: var(--gn-outline) solid var(--gn-outline-color);
   border-radius: var(--gn-radius-sm);
   background: var(--gn-bg-3);
-  color: var(--gn-ink);
   box-shadow: var(--gn-shadow-press);
   cursor: pointer;
-  transition: transform var(--gn-pop-ms) var(--gn-ease), box-shadow var(--gn-pop-ms) var(--gn-ease);
 }
-.mode__emoji { font-size: 1.7rem; line-height: 1; }
-.mode__label {
+.switchline input {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  accent-color: var(--gn-accent-4);
+  cursor: pointer;
+}
+.switchline__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.switchline__text b {
   font-family: var(--gn-font-display);
-  font-size: .98rem;
-  font-weight: 800;
-  text-align: center;
+  font-size: 1.02rem;
   line-height: 1.1;
 }
-.mode__cards {
-  font-size: .66rem;
+.switchline__text small {
+  font-size: .72rem;
   text-transform: uppercase;
   letter-spacing: var(--gn-track-label);
   color: var(--gn-ink-dim);
 }
-.mode:hover:not(:disabled) { transform: translate(-1px, -2px); box-shadow: var(--gn-shadow); }
-.mode[aria-pressed="true"] {
-  background: var(--gn-accent-4);
-  color: var(--gn-accent-4-ink);
-  box-shadow: var(--gn-shadow);
-  transform: translateY(-2px) rotate(var(--gn-tilt-c));
+/* Off is the loud state: the 18+ pile is in the deck, and that should be readable from
+   across the room before anyone starts a game. */
+.switchline:has(input:not(:checked)) {
+  background: var(--gn-accent-2);
+  color: var(--gn-accent-2-ink);
 }
-.mode[aria-pressed="true"] .mode__cards { color: var(--gn-accent-4-ink); opacity: .75; }
-.mode:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
-.mode--empty .mode__emoji { filter: grayscale(1); }
+.switchline:has(input:not(:checked)) .switchline__text small { color: inherit; opacity: .8; }
 .modeshown { color: var(--gn-ink-dim); font-size: .95rem; }
 .modeshown b { color: var(--gn-ink); font-family: var(--gn-font-display); }
+.panel__warn {
+  padding: 9px 13px;
+  border-radius: var(--gn-radius-sm);
+  background: var(--gn-danger);
+  color: var(--gn-danger-ink);
+  font-size: .82rem;
+  font-weight: 800;
+}
 
 /* --- "More settings" ---------------------------------------------------- */
 .more { width: 100%; display: flex; flex-direction: column; gap: 12px; }

@@ -43,9 +43,10 @@ one: `http://192.168.1.42:5050/ABCD/tv`
    winner. That player gets a point; only the winning card's author is revealed.
 5. First to the target score (default 5) wins. The host can start a rematch in the same room.
 
-4–8 players (2 with **test mode**, for playing with bots). The host picks a **mode** —
-Normal, 18+ or Millennial, each dealing from its own pile of GIFs — and everything else
-(judge rotation, points to win, timers, test mode) lives behind *More settings*.
+4–8 players (2 with **test mode**, for playing with bots). The host gets one switch —
+**keep it clean**, on by default; turn it off and the 18+ cards and prompts are mixed
+in — and everything else (judge rotation, points to win, timers, test mode) lives behind
+*More settings*.
 
 ## Routes
 
@@ -79,16 +80,17 @@ and timing as a CSS custom property. Change a value, reload. No build step, no n
 
 **The prompts** — write them in the curator's **Prompts** tab, or edit
 `curation/prompts.json` directly: one entry per prompt, keyed by id, with `___` marking
-the blank and `sets` naming the modes it plays in.
+the blank and `sets` naming the pile it's in.
 
-**The GIFs** — use the curator below. Aim for 56+ per mode so eight hands of seven don't
-recycle constantly.
+**The GIFs** — use the curator below. Aim for 56+ in the Normal pile so eight hands of
+seven don't recycle constantly.
 
 ## Curating the deck
 
-Three modes — **Normal**, **18+** and **Millennial** — each deal from their own pile of
-cards *and* their own pile of prompts, because a mode is a pairing: 18+ GIFs answering
-18+ prompts. You fill both piles here:
+There is one deck with a switch on it. Everything tagged **Normal** plays in every game;
+everything tagged **18+** joins in only when the host turns *keep it clean* off — so a
+dirty game is a clean one plus the spicy pile, never a different game. Cards and prompts
+are tagged the same way, because both come off the same switch. You fill both piles here:
 
 ```bash
 export GIPHY_API_KEY=xxxxxxxx        # developers.giphy.com -> Create an App -> API
@@ -100,10 +102,10 @@ you want. There are no built-in search terms: the tool used to invent them from 
 hardcoded list of ~100 moods, which produced under a quarter of the deck while hand-typed
 searches produced three quarters — so it stopped guessing.
 
-A GIF can be in several sets at once, so a cursed one can be both Normal and 18+. Tagging
-is reversible, and untagging deletes the file again. Tagged GIFs land in
-`app/static/gifs/` and the manifest immediately, so they're in the game next time it
-starts.
+The two piles are exclusive — "in both" would just be a longer way of writing Normal,
+since 18+ tops Normal up rather than replacing it. Tagging is reversible, and untagging
+deletes the file again. Tagged GIFs land in `app/static/gifs/` and the manifest
+immediately, so they're in the game next time it starts.
 
 **Your own GIFs** — paste links into the box on the Library tab. Tenor, Discord, anywhere:
 a page gets resolved to the GIF it advertises, a direct link is used as-is. Links rather
@@ -114,22 +116,23 @@ python scripts/curate_gifs.py --source tenor    # Tenor instead of Giphy
 python scripts/curate_gifs.py --rating pg-13    # tighten what the API returns
 ```
 
-A mode needs **56 cards** before eight people can play it (28 for four); the lobby greys out
-modes that aren't ready and the curator shows a progress meter for each.
+The deck needs **56 cards** before eight people can play (28 for four); the lobby disables
+Start and says what's missing, and the curator shows a progress meter for the Normal pile.
+The 18+ pile has no target — it tops the deck up, so any number of them is a fine number.
 
 **Library and Discover are the same grid.** Library shows what's in the game; Discover
-shows what a search turned up. Under every card are the three set buttons — tap
-**Normal**, **18+** or **Millennial** to put it in or take it out — and a ✕ that means
-*not funny*: the card leaves the game and search never offers it again. The Rejected
+shows what a search turned up. Under every card are the two pile buttons — tap **Normal**
+or **18+** to put it in one, tap the lit one to take it out of the game — and a ✕ that
+means *not funny*: the card leaves the game and search never offers it again. The Rejected
 filter lists those and can undo any of them.
 
 **Prompts** is the same idea for the words. Type one — or several, one per line — pick the
-sets it belongs in, and Add. Every prompt already written is listed below, filterable by
-set, with the same three buttons: tap **18+** on a prompt and it starts appearing in 18+
+pile it belongs in, and Add. Every prompt already written is listed below, filterable by
+pile, with the same two buttons: tap **18+** on a prompt and it stops appearing in clean
 games. Click any line to edit it; it saves when you click away. The ✕ deletes, and asks
 once first, because unlike a card there is no rejected list to fish it back out of.
 
-Turning every set off leaves a prompt on file but out of play — a soft retirement, and the
+Tapping the lit pile leaves a prompt on file but out of play — a soft retirement, and the
 only state a card can't be in.
 
 ## Where the deck lives
@@ -141,7 +144,7 @@ three small JSON files in `curation/`, and they are the whole state of the deck:
 |---|---|
 | `library.json` | every card in the game: the link it came from, its sets, its size, and how often it has been **played** and **won** |
 | `ignored.json` | cards you rejected with ✕ — read only by search, so they stop coming back |
-| `prompts.json` | every prompt, its text, and the modes it plays in |
+| `prompts.json` | every prompt, its text, and the pile it's in |
 
 Each stamps when an entry joined the list it's in. That's a few tens of KB of text that
 diffs cleanly, versus ~70 MB of binaries that would sit in the history forever and make

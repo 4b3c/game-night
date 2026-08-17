@@ -462,49 +462,42 @@
     );
   }
 
-  function modeName(id) {
-    const found = ((state && state.modes) || []).filter(function (m) { return m.id === id; })[0];
-    return found ? found.emoji + ' ' + found.label : id;
+  /** The line under the switch: what's in the deck, and what flipping it would do. */
+  function deckLine(d) {
+    if (!d.clean) {
+      return '18+ cards and prompts are in — ' + d.gifs + ' GIFs, ' + d.prompts + ' prompts';
+    }
+    if (!d.adds.gifs && !d.adds.prompts) {
+      return d.gifs + ' GIFs, ' + d.prompts + ' prompts — nothing is tagged 18+ yet';
+    }
+    const extra = [];
+    if (d.adds.gifs) extra.push(d.adds.gifs + ' GIFs');
+    if (d.adds.prompts) extra.push(d.adds.prompts + ' prompts');
+    return d.gifs + ' GIFs, ' + d.prompts + ' prompts — turn off to add ' + extra.join(' and ');
   }
 
-  /** The line under a mode button: what it has, or what it's missing. `why` names the
-   *  shortage in full on hover; this is the version that fits in a pill. */
-  function modeShort(m) {
-    if (m.enough) return m.cards + ' GIFs';
-    if (/prompt/.test(m.why || '')) return m.prompts ? 'only ' + m.prompts + ' prompts' : 'no prompts';
-    return m.cards ? 'only ' + m.cards : 'none yet';
-  }
-
-  /** The one decision that matters, up front: which set of GIFs are we playing with. */
-  function modePickerHtml(editable) {
-    const chosen = state.options.mode;
-    const modes = state.modes || [];
+  /** The one decision that matters, up front: is the 18+ pile in or out?
+   *
+   *  A switch rather than a set of modes, because there is only one deck: clean is that
+   *  deck, and turning this off mixes the 18+ pile in on top. Default on, so nobody has
+   *  to think about it before handing a phone to whoever is in the room.
+   */
+  function deckSwitchHtml(editable) {
+    const d = state.deck;
+    if (!d) return '';
     if (!editable) {
-      return '<p class="modeshown">Mode: <b>' + esc(modeName(chosen)) + '</b></p>';
+      return '<p class="modeshown">Deck: <b>' +
+        (d.clean ? 'keeping it clean' : '18+ mixed in') + '</b></p>';
     }
     return (
-      '<div class="option">' +
-        '<span class="option__label">Game mode</span>' +
-        '<div class="modes">' +
-          modes
-            .map(function (m) {
-              const on = m.id === chosen;
-              // A mode needs both halves of a deck — curated GIFs and written prompts —
-              // and says which one it's short of instead of failing at Start.
-              return (
-                '<button class="mode' + (on ? ' mode--on' : '') + (m.enough ? '' : ' mode--empty') + '"' +
-                ' data-opt="mode" data-value="' + esc(m.id) + '" aria-pressed="' + (on ? 'true' : 'false') + '"' +
-                (m.enough ? '' : ' disabled title="' + esc(m.why || 'Not ready yet') + '"') +
-                ' type="button">' +
-                  '<span class="mode__emoji" aria-hidden="true">' + esc(m.emoji) + '</span>' +
-                  '<span class="mode__label">' + esc(m.label) + '</span>' +
-                  '<span class="mode__cards">' + esc(modeShort(m)) + '</span>' +
-                '</button>'
-              );
-            })
-            .join('') +
-        '</div>' +
-      '</div>'
+      '<label class="switchline">' +
+        '<input type="checkbox" data-opt="clean"' + (d.clean ? ' checked' : '') + '>' +
+        '<span class="switchline__text">' +
+          '<b>Keep it clean</b>' +
+          '<small>' + esc(deckLine(d)) + '</small>' +
+        '</span>' +
+      '</label>' +
+      (d.ready ? '' : '<p class="panel__warn">' + esc(d.why) + '</p>')
     );
   }
 
@@ -567,21 +560,26 @@
     const you = me();
     const count = state.players.length;
     const need = state.min_players;
-    const canStart = state.can_start;
+    // A deck too thin to deal is as much of a blocker as an empty lobby, and saying so
+    // here beats letting someone press Start and read an error.
+    const deckReady = !state.deck || state.deck.ready;
+    const canStart = state.can_start && deckReady;
     return (
       '<section class="panel panel--lobby">' +
         '<h1 class="panel__title">Lobby</h1>' +
         '<p class="panel__code">Code <b>' + CODE + '</b> · ' + count + '/' + state.max_players + ' players</p>' +
         lobbyListHtml(you.is_host) +
         (you.is_host
-          ? modePickerHtml(true) +
+          ? deckSwitchHtml(true) +
             moreSettingsHtml() +
             '<button class="btn btn--big btn--go" data-action="start"' + (canStart ? '' : ' disabled') + ' type="button">' +
-              (canStart ? 'Start game' : 'Need ' + (need - count) + ' more player' + (need - count === 1 ? '' : 's')) +
+              (state.can_start
+                ? (deckReady ? 'Start game' : 'Deck not ready')
+                : 'Need ' + (need - count) + ' more player' + (need - count === 1 ? '' : 's')) +
             '</button>'
-          : modePickerHtml(false) + settingsSummaryHtml() +
+          : deckSwitchHtml(false) + settingsSummaryHtml() +
             '<p class="panel__hint">Waiting for the host to start' +
-              (canStart ? '…' : ' — ' + (need - count) + ' more player' + (need - count === 1 ? '' : 's') + ' needed') +
+              (state.can_start ? '…' : ' — ' + (need - count) + ' more player' + (need - count === 1 ? '' : 's') + ' needed') +
             '</p>') +
         '<a class="panel__link" href="' + TV_URL + '">Put this game on a TV →</a>' +
         '<button class="btn btn--ghost btn--tiny" data-action="leave" type="button">Leave game</button>' +
@@ -885,12 +883,11 @@
     }
 
     if (hit.dataset.opt && hit.dataset.value) {
-      // Mode picker / segmented control: flip it locally, then tell the server.
+      // Segmented control: flip it locally, then tell the server.
       Array.prototype.forEach.call(panel.querySelectorAll('[data-opt="' + hit.dataset.opt + '"]'), function (n) {
         const on = n === hit;
         n.setAttribute('aria-pressed', on ? 'true' : 'false');
         n.classList.toggle('seg--on', on && n.classList.contains('seg'));
-        n.classList.toggle('mode--on', on && n.classList.contains('mode'));
       });
       conn.send('set_options', { options: collectOptions() });
       return;

@@ -19,14 +19,12 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from .decks import (
-    DEFAULT_MODE,
-    MODES,
+    CLEAN_BY_DEFAULT,
     Deck,
     build_gif_deck,
     build_prompt_deck,
+    deck_counts,
     gif_index,
-    mode_counts,
-    prompt_counts,
     prompt_index,
 )
 
@@ -81,8 +79,10 @@ class ActionError(Exception):
 # --- options ------------------------------------------------------------------
 @dataclass
 class Options:
-    # The one setting most tables will touch: which set of GIFs is in play.
-    mode: str = DEFAULT_MODE  # see decks.MODES
+    # The one setting most tables will touch. On, the 18+ pile stays out of the deck;
+    # off, it is mixed in on top of everything else. Default on, so nobody has to think
+    # about it before handing a phone to whoever is in the room.
+    clean: bool = CLEAN_BY_DEFAULT
     judge_rotation: str = "circle"  # "circle" | "last_winner"
     target_score: int = DEFAULT_TARGET_SCORE
     prompt_seconds: int = DEFAULT_PROMPT_SECONDS  # 0 = no timer
@@ -95,7 +95,7 @@ class Options:
 
     def to_dict(self) -> dict:
         return {
-            "mode": self.mode,
+            "clean": self.clean,
             "judge_rotation": self.judge_rotation,
             "target_score": self.target_score,
             "prompt_seconds": self.prompt_seconds,
@@ -106,11 +106,8 @@ class Options:
 
     def update(self, raw: dict) -> None:
         """Apply a partial dict of untrusted input, clamping everything."""
-        if "mode" in raw:
-            value = str(raw["mode"])
-            if value not in MODES:
-                raise ActionError("Unknown game mode")
-            self.mode = value
+        if "clean" in raw:
+            self.clean = bool(raw["clean"])
         if "judge_rotation" in raw:
             value = str(raw["judge_rotation"])
             if value not in ("circle", "last_winner"):
@@ -328,23 +325,21 @@ class Game:
         # deck is big enough *before* touching anyone's hand: running dry halfway would
         # otherwise leave a half-dealt game. This matters when you swap the filler GIFs
         # for your own — eight players need 56 distinct cards.
-        gif_deck = build_gif_deck(self._rng, self.options.mode)
+        gif_deck = build_gif_deck(self._rng, self.options.clean)
         needed = len(self.players) * HAND_SIZE
         if len(gif_deck) < needed:
-            mode_label = MODES[self.options.mode]["label"]
+            more = "" if not self.options.clean else " Turning off “keep it clean” adds the 18+ pile."
             raise ActionError(
-                f"{mode_label} mode only has {len(gif_deck)} GIFs — {len(self.players)} "
-                f"players need {needed}. Curate more with scripts/curate_gifs.py, or pick "
-                f"another mode."
+                f"The deck only has {len(gif_deck)} GIFs — {len(self.players)} players need "
+                f"{needed}. Curate more in the curator's Library tab.{more}"
             )
-        # Same check for the other half of the deck: a mode whose prompts have all been
-        # untagged in the curator would otherwise deal fine and then die on round one.
-        prompt_deck = build_prompt_deck(self._rng, self.options.mode)
+        # Same check for the other half of the deck: prompts all untagged in the curator
+        # would otherwise deal fine and then die on round one.
+        prompt_deck = build_prompt_deck(self._rng, self.options.clean)
         if len(prompt_deck) < PROMPT_CHOICES:
-            mode_label = MODES[self.options.mode]["label"]
             raise ActionError(
-                f"{mode_label} mode only has {len(prompt_deck)} prompts — a round needs "
-                f"{PROMPT_CHOICES} to choose between. Add some in the curator's Prompts tab."
+                f"The deck only has {len(prompt_deck)} prompts — a round needs "
+                f"{PROMPT_CHOICES} to choose between. Write some in the curator's Prompts tab."
             )
 
         hands = {pid: gif_deck.draw_many(HAND_SIZE) for pid in self.players}
@@ -680,8 +675,7 @@ class Game:
         return prompt_index().get(self.prompt_id)
 
     def public_state(self) -> dict:
-        counts = mode_counts()
-        prompts = prompt_counts()
+        deck = self._deck_view()
         waiting_on = [
             {"nickname": p.nickname, "avatar": p.avatar, "connected": p.connected}
             for p in self._non_judge_players()
@@ -710,28 +704,38 @@ class Game:
             "tv_connected": self.tv_count > 0,
             "min_players": self.options.min_players,
             "max_players": MAX_PLAYERS,
-            "modes": [self._mode_view(name, meta, counts, prompts) for name, meta in MODES.items()],
+            "deck": deck,
             "can_start": len(self.players) >= self.options.min_players,
-            "prompt_count": prompts.get(self.options.mode, 0),
+            "prompt_count": deck["prompts"],
         }
 
-    def _mode_view(self, name: str, meta: dict, cards: dict, prompts: dict) -> dict:
-        """One lobby button. A mode needs both halves of a deck to be playable, so it
-        carries why it isn't rather than leaving the button to guess."""
+    def _deck_view(self) -> dict:
+        """What the switch is worth, both ways, and whether the deck can be played.
+
+        `adds` is what flipping "keep it clean" off would bring in. It's here so the lobby
+        can say "+6 GIFs" on the switch itself rather than making someone flip it to find
+        out — and so a table that has curated nothing 18+ can see there's nothing behind
+        it.
+        """
+        counts = deck_counts()
+        clean = self.options.clean
+        gifs = counts["clean" if clean else "spicy"]["gifs"]
+        prompts = counts["clean" if clean else "spicy"]["prompts"]
         needed = max(len(self.players), MIN_PLAYERS) * HAND_SIZE
-        gifs, written = cards.get(name, 0), prompts.get(name, 0)
         why = ""
         if gifs < needed:
-            why = f"Only {gifs} GIFs curated for this mode — {needed} needed"
-        elif written < PROMPT_CHOICES:
-            why = f"Only {written} prompts written for this mode"
+            why = f"Only {gifs} GIFs curated — {needed} needed for this many players"
+        elif prompts < PROMPT_CHOICES:
+            why = f"Only {prompts} prompts written — a round needs {PROMPT_CHOICES}"
         return {
-            "id": name,
-            "label": meta["label"],
-            "emoji": meta["emoji"],
-            "cards": gifs,
-            "prompts": written,
-            "enough": not why,
+            "clean": clean,
+            "gifs": gifs,
+            "prompts": prompts,
+            "adds": {
+                "gifs": counts["spicy"]["gifs"] - counts["clean"]["gifs"],
+                "prompts": counts["spicy"]["prompts"] - counts["clean"]["prompts"],
+            },
+            "ready": not why,
             "why": why,
         }
 

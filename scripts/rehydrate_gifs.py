@@ -114,8 +114,8 @@ def rebuild_manifest(decisions: dict) -> int:
     """Regenerate the manifest from the decisions, so the two can never drift.
 
     The manifest is what the game reads; library.json is what a human edited. Deriving
-    one from the other means a card can't be tagged Millennial in one file and Normal in
-    the other.
+    one from the other means a card can't be tagged 18+ in one file and Normal in the
+    other.
 
     Each entry carries the GIF's real pixel size. The cards used to be forced into a 4:3
     box, which cropped anything that wasn't; knowing the true shape is what lets the

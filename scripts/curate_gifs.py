@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Build the game's deck: the GIFs, and the prompts they answer.
 
-A web app with three tabs. A GIF or a prompt can be in several sets at once, so a cursed
-GIF can be in both Normal and 18+, and so can the prompt it answers.
+A web app with three tabs. Everything is in one of two piles: Normal plays in every game,
+and 18+ only joins in when the host turns "keep it clean" off. Cards and prompts are tagged
+the same way, because a game deals both from the same switch.
 
     python scripts/curate_gifs.py          # then open http://127.0.0.1:5099
 
     Library    every card already in the game, filterable by set
     Discover   you search, it shows the results, you tag the ones you want
-    Prompts    write them, edit them, and choose which modes they play in
+    Prompts    write them, edit them, and choose which pile they're in
 
 There are deliberately no built-in search terms. There used to be ~100 hardcoded moods
 ("backrooms", "capybara") that the tool searched at random whenever you hadn't typed
@@ -22,8 +23,8 @@ than a file upload, because a link is what lets the card be rebuilt on another m
 State is three files, all in `curation/`: `library.json` is every card in the game — where
 it came from, which sets it's in, and how often it has been played and won —
 `ignored.json` is the ones you rejected, which only ever stops search offering them again,
-and `prompts.json` is every prompt and the modes it plays in. The game reads all three
-live, so anything you change here is in the next round, without a restart.
+and `prompts.json` is every prompt and the pile it's in. The game reads all three live,
+so anything you change here is in the next round, without a restart.
 
 Where to get an API key:
   giphy: developers.giphy.com -> Create an Account -> Create an App -> pick "API"
@@ -62,13 +63,15 @@ STATE_DIR = ROOT / "curation"
 # keep_original() for what qualifies and why it has to be so few files.
 ORIGINALS = STATE_DIR / "originals"
 
-# The sets a GIF can belong to. These names are the mode ids in app/games/gah/decks.py.
+# The two piles a GIF or prompt can be in — the same names app/games/gah/decks.py uses.
+# They are exclusive: everything Normal plays in every game, and 18+ only joins in when
+# the host turns "keep it clean" off. A card in both would just be a card in Normal, so
+# the tool doesn't offer that state.
 SETS = {
     "normal": {"label": "Normal"},
     "adult": {"label": "18+"},
-    "millennial": {"label": "Millennial"},
 }
-CARDS_PER_MODE = 56  # 8 players x 7 cards: what a mode needs to be playable
+CARDS_PER_DECK = 56  # 8 players x 7 cards: what the clean deck needs to be playable
 
 USER_AGENT = "gifs-against-humanity-curator/2.0 (local curation tool)"
 
@@ -384,7 +387,7 @@ class Library:
         return {
             "sets": per_set,
             "ignored": len(store.ignored()),
-            "target": CARDS_PER_MODE,
+            "target": CARDS_PER_DECK,
             "in_game": len(cards),
         }
 
@@ -770,7 +773,7 @@ def build_app(library: Library, source, password: str) -> Flask:
             rating=getattr(source, "rating", ""),
             sets=SETS,
             # Explicitly, because Flask's JSON provider sorts keys — relying on the dict
-            # would put the buttons in the order 18+ / Millennial / Normal.
+            # would put the buttons in the order 18+ / Normal.
             set_order=list(SETS),
             counts=library.counts(),
         )
@@ -968,7 +971,7 @@ def main() -> int:
     print(f"      into:   {GIF_DIR}")
     print(
         "      gifs:   "
-        + "   ".join(f"{meta['label']} {counts['sets'][name]}/{CARDS_PER_MODE}" for name, meta in SETS.items())
+        + "   ".join(f"{meta['label']} {counts['sets'][name]}/{CARDS_PER_DECK}" for name, meta in SETS.items())
     )
     print(
         "      words:  "

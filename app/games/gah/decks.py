@@ -124,7 +124,7 @@ def _read_manifest() -> tuple[tuple[dict, ...], dict[str, dict]]:
             "id": g["id"],
             "file": g["file"],
             "label": g.get("label", g["id"]),
-            # Which modes this card belongs to — a card can be in several. Written by
+            # Which pile this card is in — Normal or 18+. Written by
             # scripts/curate_gifs.py. `rating` is the older single-tag form.
             "sets": _sets_of(g),
         }
@@ -147,51 +147,55 @@ _gif_file = _Reloading(GIF_MANIFEST_PATH, _read_manifest)
 
 
 def _sets_of(entry: dict) -> tuple[str, ...]:
-    """Modes a card or prompt belongs to, tolerating older single-`rating` manifests.
+    """Piles a card or prompt belongs to, tolerating older single-`rating` manifests.
 
-    An empty list is honoured as "no modes" rather than treated as missing: a prompt with
-    every set turned off is retired but still on file, which is a state cards can't be in
+    An empty list is honoured as "no pile" rather than treated as missing: a prompt with
+    both sets turned off is retired but still on file, which is a state cards can't be in
     (untagging a card removes it outright).
     """
     sets = entry.get("sets")
     if isinstance(sets, (list, tuple)):
         return tuple(str(s) for s in sets)
-    legacy = {"sfw": "normal", "adult": "adult", "millennial": "millennial"}
-    return (legacy.get(entry.get("rating", "sfw"), "normal"),)
+    return ("adult",) if entry.get("rating") == "adult" else ("normal",)
 
 
-# --- modes ---------------------------------------------------------------------
-# Each mode deals from its own set of cards *and* its own set of prompts, both tagged by
-# scripts/curate_gifs.py. Adding a fourth mode is one entry here plus one button in the
-# lobby.
-MODES: dict[str, dict] = {
-    "normal": {"label": "Normal", "emoji": "🙂"},
-    "adult": {"label": "18+", "emoji": "🌶️"},
-    "millennial": {"label": "Millennial", "emoji": "📼"},
+# --- the two piles ---------------------------------------------------------------
+# Not modes: one deck with a switch on it. Everything clean is `normal` and plays in every
+# game; `adult` is the pile that only joins in when the host turns "keep it clean" off. So
+# a dirty game is a superset of a clean one, never a different game.
+#
+# There used to be a third pile, Millennial, picked as a mode alongside the other two. It
+# split a deck that was already thin across three piles nobody filled, and the joke was
+# never in the cards being millennial — it was in the GIF.
+SETS: dict[str, dict] = {
+    "normal": {"label": "Normal"},
+    "adult": {"label": "18+"},
 }
-DEFAULT_MODE = "normal"
+CLEAN_BY_DEFAULT = True
 
 
-def gifs_for_mode(mode: str) -> tuple[dict, ...]:
-    """The cards this mode plays with. A card can belong to more than one mode."""
-    wanted = mode if mode in MODES else DEFAULT_MODE
-    return tuple(g for g in load_gifs() if wanted in g["sets"])
+def _in_play(entry: dict, clean: bool) -> bool:
+    sets = entry["sets"]
+    return "normal" in sets or (not clean and "adult" in sets)
 
 
-def prompts_for_mode(mode: str) -> tuple[dict, ...]:
-    """The prompts this mode plays with. A prompt can belong to more than one mode."""
-    wanted = mode if mode in MODES else DEFAULT_MODE
-    return tuple(p for p in load_prompts() if wanted in p["sets"])
+def gifs_for(clean: bool) -> tuple[dict, ...]:
+    """The cards a game deals from. Clean leaves the 18+ pile out; dirty adds it on top."""
+    return tuple(g for g in load_gifs() if _in_play(g, clean))
 
 
-def mode_counts() -> dict[str, int]:
-    """How many cards each mode has — the lobby shows this so you can see what's ready."""
-    return {name: len(gifs_for_mode(name)) for name in MODES}
+def prompts_for(clean: bool) -> tuple[dict, ...]:
+    """The prompts a game deals from, on the same switch as the cards."""
+    return tuple(p for p in load_prompts() if _in_play(p, clean))
 
 
-def prompt_counts() -> dict[str, int]:
-    """How many prompts each mode has. A mode with none can't be played at all."""
-    return {name: len(prompts_for_mode(name)) for name in MODES}
+def deck_counts() -> dict[str, dict[str, int]]:
+    """What each side of the switch is worth, so the lobby can show what turning it off
+    would add before anyone commits to it."""
+    return {
+        "clean": {"gifs": len(gifs_for(True)), "prompts": len(prompts_for(True))},
+        "spicy": {"gifs": len(gifs_for(False)), "prompts": len(prompts_for(False))},
+    }
 
 
 def gif_index() -> dict[str, dict]:
@@ -226,15 +230,15 @@ class Deck:
         self.discard_pile.extend(ids)
 
 
-def build_gif_deck(rng: random.Random, mode: str = DEFAULT_MODE) -> Deck:
-    return Deck([g["id"] for g in gifs_for_mode(mode)], rng)
+def build_gif_deck(rng: random.Random, clean: bool = CLEAN_BY_DEFAULT) -> Deck:
+    return Deck([g["id"] for g in gifs_for(clean)], rng)
 
 
-def build_prompt_deck(rng: random.Random, mode: str = DEFAULT_MODE) -> Deck:
-    return Deck([p["id"] for p in prompts_for_mode(mode)], rng)
+def build_prompt_deck(rng: random.Random, clean: bool = CLEAN_BY_DEFAULT) -> Deck:
+    return Deck([p["id"] for p in prompts_for(clean)], rng)
 
 
 def prompt_index() -> dict[str, dict]:
-    """Every prompt by id, mode or no mode — a round in progress still has to be able to
+    """Every prompt by id, in play or not — a round in progress still has to be able to
     look up the prompt it is already showing, even if it was retired mid-game."""
     return _prompt_file.get()[1]

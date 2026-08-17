@@ -30,8 +30,8 @@ def main() -> None:
         raise SystemExit(f"no .gif files found in {GIF_DIR}")
 
     manifest_path = GIF_DIR / "manifest.json"
-    # Keep what the curator wrote: `sets` is what puts a card in Normal, 18+ and/or
-    # Millennial mode, and a rescan must never silently reset it.
+    # Keep what the curator wrote: `sets` is what puts a card in the Normal or 18+ pile,
+    # and a rescan must never silently reset it.
     known: dict[str, dict] = {}
     if manifest_path.exists():
         try:
@@ -45,8 +45,7 @@ def main() -> None:
     entries = []
     for path in files:
         old = known.get(path.name, {})
-        legacy = {"sfw": "normal", "adult": "adult", "millennial": "millennial"}
-        sets = old.get("sets") or [legacy.get(old.get("rating", "sfw"), "normal")]
+        sets = old.get("sets") or ["adult" if old.get("rating") == "adult" else "normal"]
         entry = {
             "id": old.get("id") or path.stem,
             "file": path.name,

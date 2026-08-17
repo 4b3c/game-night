@@ -11,7 +11,7 @@ import random
 import pytest
 
 from app.games.gah import engine as E
-from app.games.gah.decks import Deck, build_gif_deck, gifs_for_mode, load_gifs
+from app.games.gah.decks import Deck, build_gif_deck, gifs_for, load_gifs
 from app.games.gah.engine import ActionError, Game, Phase
 
 
@@ -199,7 +199,7 @@ def test_two_players_can_never_hold_the_same_gif():
     reshuffled several times over a game this long — exactly where a double-deal bug
     would show up.
     """
-    total = len(gifs_for_mode("normal"))
+    total = len(gifs_for(clean=True))
     game, _ = make_game(8, start=True, target_score=10, judge_rotation="circle")
     check_no_duplicates(game, total, "after the deal")
 
@@ -234,31 +234,47 @@ def test_two_players_can_never_hold_the_same_gif():
     assert reshuffles > 0, "the deck never recycled, so this test proved less than it should"
 
 
-def test_each_mode_deals_only_its_own_cards(monkeypatch):
-    """Normal, 18+ and Millennial are separate piles — that's the point of the tags."""
+def test_clean_leaves_the_adult_pile_out_and_dirty_adds_it(monkeypatch):
+    """One deck with a switch on it: dirty is clean plus the 18+ pile, never instead."""
     from app.games.gah import decks
 
     tagged = (
-        [{"id": f"s{i}", "file": f"s{i}.gif", "label": "s", "sets": ["normal"]} for i in range(30)]
+        [{"id": f"s{i}", "file": f"s{i}.gif", "label": "s", "sets": ["normal"]} for i in range(60)]
         + [{"id": f"a{i}", "file": f"a{i}.gif", "label": "a", "sets": ["adult"]} for i in range(30)]
-        + [{"id": f"m{i}", "file": f"m{i}.gif", "label": "m", "sets": ["millennial"]} for i in range(30)]
-        # one card in two modes at once — the whole point of sets
-        + [{"id": "both", "file": "both.gif", "label": "b", "sets": ["normal", "adult"]}]
     )
     monkeypatch.setattr(decks, "load_gifs", lambda: tuple(tagged))
 
-    assert decks.mode_counts() == {"normal": 31, "adult": 31, "millennial": 30}
+    assert decks.deck_counts()["clean"]["gifs"] == 60
+    assert decks.deck_counts()["spicy"]["gifs"] == 90
+    assert {c["id"] for c in decks.gifs_for(True)} < {c["id"] for c in decks.gifs_for(False)}
 
-    for mode, prefix in (("normal", "s"), ("adult", "a"), ("millennial", "m")):
-        game, _ = make_game(4, start=False)
-        game.set_options("p0", {"mode": mode})
-        game.start_game("p0")
-        dealt = [card for player in game.players.values() for card in player.hand]
-        assert dealt, "nothing was dealt"
-        allowed = {c["id"] for c in decks.gifs_for_mode(mode)}
-        assert set(dealt) <= allowed, f"{mode} dealt a card from another pile"
-        assert any(card.startswith(prefix) for card in dealt)
-        assert game.public_state()["options"]["mode"] == mode
+    # Clean is the default, and it deals nothing from the 18+ pile.
+    game, _ = make_game(4, start=True)
+    assert game.options.clean is True
+    dealt = [card for player in game.players.values() for card in player.hand]
+    assert dealt and not any(card.startswith("a") for card in dealt)
+
+    # Turned off, the 18+ cards are in the deck — checked on the pile rather than the
+    # hands, since 28 cards out of 90 could miss them by luck.
+    game, _ = make_game(4)
+    game.set_options("p0", {"clean": False})
+    game.start_game("p0")
+    assert len(game._gif_deck) == 90 - 4 * E.HAND_SIZE  # what's left after the deal
+    assert game.public_state()["options"]["clean"] is False
+
+
+def test_a_card_in_no_pile_is_dealt_by_neither(monkeypatch):
+    """Untagging is how a card leaves the game — including the old Millennial ones."""
+    from app.games.gah import decks
+
+    tagged = (
+        [{"id": f"s{i}", "file": f"s{i}.gif", "label": "s", "sets": ["normal"]} for i in range(60)]
+        + [{"id": "orphan", "file": "orphan.gif", "label": "o", "sets": []}]
+    )
+    monkeypatch.setattr(decks, "load_gifs", lambda: tuple(tagged))
+
+    assert "orphan" not in {c["id"] for c in decks.gifs_for(True)}
+    assert "orphan" not in {c["id"] for c in decks.gifs_for(False)}
 
 
 def test_an_older_single_tag_manifest_still_works():
@@ -267,37 +283,43 @@ def test_an_older_single_tag_manifest_still_works():
 
     assert _sets_of({"rating": "sfw"}) == ("normal",)
     assert _sets_of({"rating": "adult"}) == ("adult",)
-    assert _sets_of({"rating": "millennial"}) == ("millennial",)
     assert _sets_of({}) == ("normal",)
-    assert _sets_of({"sets": ["normal", "adult"], "rating": "sfw"}) == ("normal", "adult")
+    assert _sets_of({"sets": ["adult"], "rating": "sfw"}) == ("adult",)
+    assert _sets_of({"sets": []}) == ()
 
 
-def test_an_unknown_mode_is_refused():
+def test_the_clean_switch_takes_anything_truthy():
+    """It arrives from a checkbox, so it is a bool or nothing at all."""
     game, _ = make_game(4)
-    with pytest.raises(ActionError, match="Unknown game mode"):
-        game.set_options("p0", {"mode": "chaos"})
+    game.set_options("p0", {"clean": False})
+    assert game.options.clean is False
+    game.set_options("p0", {"target_score": 7})
+    assert game.options.clean is False, "an unrelated setting must not reset it"
+    game.set_options("p0", {"clean": True})
+    assert game.options.clean is True
 
 
-def test_a_mode_without_enough_cards_says_so(monkeypatch):
+def test_a_deck_without_enough_cards_says_so(monkeypatch):
     from app.games.gah import decks
 
-    thin = [{"id": f"a{i}", "file": f"a{i}.gif", "label": "a", "sets": ["adult"]} for i in range(10)]
-    sfw = [{"id": f"s{i}", "file": f"s{i}.gif", "label": "s", "sets": ["normal"]} for i in range(60)]
-    monkeypatch.setattr(decks, "load_gifs", lambda: tuple(thin + sfw))
+    thin = [{"id": f"s{i}", "file": f"s{i}.gif", "label": "s", "sets": ["normal"]} for i in range(10)]
+    spicy = [{"id": f"a{i}", "file": f"a{i}.gif", "label": "a", "sets": ["adult"]} for i in range(60)]
+    monkeypatch.setattr(decks, "load_gifs", lambda: tuple(thin + spicy))
 
     game, _ = make_game(4)
-    game.set_options("p0", {"mode": "adult"})
-    with pytest.raises(ActionError, match="18\\+ mode only has 10 GIFs"):
+    with pytest.raises(ActionError, match="only has 10 GIFs"):
         game.start_game("p0")
     assert game.phase == Phase.LOBBY
 
-    # The lobby is told which modes are playable, so it can grey the others out.
-    modes = {m["id"]: m for m in game.public_state()["modes"]}
-    assert modes["adult"]["enough"] is False
-    assert modes["normal"]["enough"] is True
+    # The lobby is told, so it can disable Start rather than let someone find out here.
+    deck = game.public_state()["deck"]
+    assert deck["ready"] is False
+    assert "10 GIFs" in deck["why"]
+    assert deck["adds"] == {"gifs": 60, "prompts": 0}
 
-    # Switching to a mode that does have the cards just works.
-    game.set_options("p0", {"mode": "normal"})
+    # And turning the switch off is enough to make it playable.
+    game.set_options("p0", {"clean": False})
+    assert game.public_state()["deck"]["ready"] is True
     game.start_game("p0")
     assert game.phase == Phase.ROUND_READY
 
@@ -305,10 +327,10 @@ def test_a_mode_without_enough_cards_says_so(monkeypatch):
 def test_starting_without_enough_gifs_is_refused_before_dealing(monkeypatch):
     """Swapping in your own GIFs shouldn't be able to half-deal a game."""
     game, _ = make_game(8)
-    small = tuple(gifs_for_mode("normal")[:20])  # 20 cards, 8 players need 56
+    small = tuple(gifs_for(clean=True)[:20])  # 20 cards, 8 players need 56
     monkeypatch.setattr("app.games.gah.decks.load_gifs", lambda: small)
 
-    with pytest.raises(ActionError, match="Normal mode only has 20 GIFs"):
+    with pytest.raises(ActionError, match="only has 20 GIFs"):
         game.start_game("p0")
 
     # Nothing was dealt and the game is still joinable.
@@ -318,7 +340,7 @@ def test_starting_without_enough_gifs_is_refused_before_dealing(monkeypatch):
 
 def test_deck_recycles_its_discard_pile():
     deck = build_gif_deck(random.Random(1))
-    drawn = [deck.draw() for _ in range(len(gifs_for_mode("normal")))]
+    drawn = [deck.draw() for _ in range(len(gifs_for(clean=True)))]
     assert not deck.draw_pile
     deck.discard(*drawn)
     assert deck.draw() in drawn  # recycled rather than raising
