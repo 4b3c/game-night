@@ -17,9 +17,9 @@ RUN pip install -r requirements-prod.txt
 
 COPY . .
 
-# The manifest is generated, not committed: build it from whatever GIFs are in the image.
-# At runtime a mounted GIF folder (see DEPLOY.md) brings its own manifest and wins.
-RUN python scripts/scan_gifs.py
+# The manifest travels in git; the GIFs it describes do not (see scripts/rehydrate_gifs.py),
+# so the image ships the card list and gets the pictures from the mounted GIF folder that
+# DEPLOY.md sets up. Entries with no file on disk are skipped rather than served broken.
 
 # Run as a normal user. The app writes nothing to disk — games live in memory.
 RUN useradd --create-home --uid 10001 gamenight \

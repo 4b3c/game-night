@@ -212,15 +212,18 @@ node_modules/
 .env
 !.env.example
 
-# curated GIFs stay out of git: they came from someone else API and this repo is public.
-# rsync them to the server instead (scripts/push_gifs.sh).
+# The GIF files themselves stay out of git: they are other people's work and this repo
+# is public. What travels instead is curation/decisions.json — every judgement, and the
+# link each card came from — which scripts/rehydrate_gifs.py turns back into this folder.
 app/static/gifs/*.gif
-!app/static/gifs/gif_[0-9][0-9][0-9].gif
 
-# local curation state and per-server compose tweaks
-/curation/
+# Uploaded originals are a staging area; once a card is tagged it is recorded by its
+# link in decisions.json, which is what makes it reproducible on another machine.
+/curation/imported/
+
+# per-server compose tweaks
 docker-compose.override.yml
 
-# the GIF manifest is generated (scripts/scan_gifs.py) and rewritten by the curator,
-# so it travels by rsync with the gifs it describes — not through git
-app/static/gifs/manifest.json
+# macOS
+.DS_Store
+**/.DS_Store
