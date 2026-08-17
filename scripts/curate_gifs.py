@@ -677,30 +677,45 @@ class Queue:
                 return None
         return None
 
+    # How many different searches go into one refill when nothing is pinned. One search
+    # returns 50 results, so filling from a single term meant roughly fifty cards in a row
+    # all "found under backrooms" — you had to reload to escape a term. Blending several
+    # and shuffling makes consecutive cards come from different searches, for the same
+    # number of API calls overall (three times as many per refill, a third as often).
+    BLEND = 3
+
     def _refill(self) -> bool:
-        query = self.pinned if self.pinned is not None else (random.choice(self.queries) if self.queries else "")
-        # A random offset is what makes this a firehose instead of the same 50 GIFs.
-        offset = random.randrange(0, 400)
-        try:
-            batch = self.source.fetch(query, offset)
-            self.calls += 1
-            self.last_error = None
-        except urllib.error.HTTPError as exc:
-            body = ""
+        if self.pinned is not None:
+            queries = [self.pinned]
+        elif self.queries:
+            queries = random.sample(self.queries, min(self.BLEND, len(self.queries)))
+        else:
+            queries = [""]
+
+        batch: list[dict] = []
+        errors = []
+        for query in queries:
+            # A random offset is what makes this a firehose instead of the same 50 GIFs.
             try:
-                body = exc.read().decode()[:160]
-            except Exception:  # noqa: BLE001
-                pass
-            if exc.code in (401, 403):
-                self.last_error = f"The API rejected the key ({exc.code}). Check {self.source.key_env}. {body}"
-            elif exc.code == 429:
-                self.last_error = "Rate limited — wait a minute, then keep going."
-            else:
-                self.last_error = f"API error {exc.code}: {body}"
-            return False
-        except Exception as exc:  # noqa: BLE001
-            self.last_error = f"{type(exc).__name__}: {exc}"
-            return False
+                batch.extend(self.source.fetch(query, random.randrange(0, 400)))
+                self.calls += 1
+            except urllib.error.HTTPError as exc:
+                body = ""
+                try:
+                    body = exc.read().decode()[:160]
+                except Exception:  # noqa: BLE001
+                    pass
+                if exc.code in (401, 403):
+                    errors.append(f"The API rejected the key ({exc.code}). Check {self.source.key_env}. {body}")
+                elif exc.code == 429:
+                    errors.append("Rate limited — wait a minute, then keep going.")
+                else:
+                    errors.append(f"API error {exc.code}: {body}")
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"{type(exc).__name__}: {exc}")
+
+        # One dead search out of three is not worth stopping for; report only a total loss.
+        self.last_error = errors[0] if errors and not batch else None
         random.shuffle(batch)
         self.pool.extend(batch)
         return bool(batch)
