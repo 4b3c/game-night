@@ -1,31 +1,26 @@
 #!/usr/bin/env python3
 """Browse GIFs and put them into the game's sets.
 
-A local web app. You scroll with the arrow keys and tag with N / E / M — a GIF can be in
-several sets at once, so a cursed one can be in both Normal and 18+.
+A web app with two tabs, both of them a grid of GIFs you tag by tapping a set's button.
+A GIF can be in several sets at once, so a cursed one can be in both Normal and 18+.
 
     python scripts/curate_gifs.py          # then open http://127.0.0.1:5099
 
-    ←  →      previous / next GIF
-    N         toggle Normal        (mode "normal")
-    E         toggle Eighteen+     (mode "adult")
-    M         toggle Millennial    (mode "millennial")
-    /         jump to the search box
-    R         related tags for what you're looking at — the way to find more like it
-    X         remove from every set
+    Library    every card already in the game, filterable by set
+    Discover   you search, it shows the results, you tag the ones you want
 
-Finding the weird stuff: type anything into the search box (`nuke`, `deep fried`, `cursed`),
-or press R on a GIF you like and click one of the related tags Giphy suggests. Packs of
-starter queries are built in — try `--pack cursed`.
+There are deliberately no built-in search terms. There used to be ~100 hardcoded moods
+("backrooms", "capybara") that the tool searched at random whenever you hadn't typed
+anything; they produced under a quarter of the deck while hand-typed searches produced
+three quarters of it. Guessing at someone's taste went badly, so now it just asks.
 
-Your own GIFs: drag files onto the page. They're copied in and tagged like anything else,
-so the ones you already collected in Discord can go straight into a set.
+Your own GIFs: paste links on the Library tab — Tenor, Discord, anywhere. A link rather
+than a file upload, because a link is what lets the card be rebuilt on another machine
+(see scripts/rehydrate_gifs.py).
 
-Low-frame GIFs (near-stills, 4-frame stutters) are filtered out before you see them;
-`--min-frames` sets the bar.
-
-Nothing is deleted that you didn't untag: GIFs you scroll past are remembered as seen so
-they don't come round again, and `curation/decisions.json` keeps the lot between sessions.
+State is two files, both in `curation/`: `library.json` is every card in the game — where
+it came from, which sets it's in, and how often it has been played and won — and
+`ignored.json` is the ones you rejected, which only ever stops search offering them again.
 
 Where to get an API key:
   giphy: developers.giphy.com -> Create an Account -> Create an App -> pick "API"
@@ -40,7 +35,6 @@ import hashlib
 import hmac
 import json
 import os
-import random
 import re
 import secrets
 import sys
@@ -54,48 +48,24 @@ from pathlib import Path
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+import curation_store as store  # noqa: E402 — needs the path above
+
 GIF_DIR = ROOT / "app" / "static" / "gifs"
 MANIFEST = GIF_DIR / "manifest.json"
 STATE_DIR = ROOT / "curation"
-DECISIONS = STATE_DIR / "decisions.json"
 # Bytes for cards whose link will rot. Committed, unlike app/static/gifs — see
 # keep_original() for what qualifies and why it has to be so few files.
 ORIGINALS = STATE_DIR / "originals"
 
 # The sets a GIF can belong to. These names are the mode ids in app/games/gah/decks.py.
 SETS = {
-    "normal": {"key": "N", "label": "Normal"},
-    "adult": {"key": "E", "label": "Eighteen+"},
-    "millennial": {"key": "M", "label": "Millennial"},
+    "normal": {"label": "Normal"},
+    "adult": {"label": "18+"},
+    "millennial": {"label": "Millennial"},
 }
 CARDS_PER_MODE = 56  # 8 players x 7 cards: what a mode needs to be playable
-
-QUERY_PACKS = {
-    "reactions": [
-        "reaction", "shrug", "facepalm", "panic", "awkward", "confused", "shocked",
-        "eye roll", "slow clap", "nervous", "fail", "smug", "crying", "screaming",
-        "celebration", "thumbs up", "disgusted", "suspicious", "sleeping", "bored",
-        "excited", "disappointed", "unimpressed", "laughing", "wave", "wink",
-    ],
-    "cursed": [
-        "cursed", "cursed image", "wtf", "unsettling", "deep fried", "deep fried meme",
-        "chaotic", "unhinged", "shitpost", "surreal", "fever dream", "glitch",
-        "distorted", "gremlin", "no context", "why", "help", "eldritch", "haunted",
-        "creature", "goofy", "brainrot", "explosion", "nuke", "gas leak", "on fire",
-        "cat scream", "possessed", "melting", "vhs horror", "liminal", "backrooms",
-    ],
-    "millennial": [
-        "2012", "vine", "harlem shake", "doge", "rage comic", "myspace", "emo",
-        "tumblr", "nyan cat", "trollface", "dial up", "flip phone", "blockbuster",
-        "vhs", "windows xp", "msn", "clippy", "shrek", "spongebob", "office space",
-        "the office", "parks and rec", "arrested development", "napoleon dynamite",
-    ],
-    "chaos": [
-        "chaos", "destruction", "car crash", "falling over", "wipeout", "faceplant",
-        "flip table", "food fight", "firework fail", "trampoline", "waterslide",
-        "sprinkler", "goat scream", "seagull", "raccoon", "possum", "capybara",
-    ],
-}
 
 USER_AGENT = "gifs-against-humanity-curator/2.0 (local curation tool)"
 
@@ -156,14 +126,6 @@ class GiphySource:
             )
         return out
 
-    def related_tags(self, term: str) -> list[str]:
-        if not term:
-            return []
-        url = f"https://api.giphy.com/v1/tags/related/{urllib.parse.quote(term)}?api_key={self.api_key}"
-        try:
-            return [t["name"] for t in _get_json(url).get("data", []) if t.get("name")][:14]
-        except Exception:  # noqa: BLE001 — discovery is a nicety, never fatal
-            return []
 
     def _rendition(self, images: dict) -> str | None:
         """The rendition closest to card size that still downloads quickly.
@@ -235,17 +197,6 @@ class TenorSource:
                 }
             )
         return out
-
-    def related_tags(self, term: str) -> list[str]:
-        if not term:
-            return []
-        url = "https://tenor.googleapis.com/v2/search_suggestions?" + urllib.parse.urlencode(
-            {"key": self.api_key, "q": term, "limit": 14, "client_key": "gah_curator"}
-        )
-        try:
-            return list(_get_json(url).get("results", []))[:14]
-        except Exception:  # noqa: BLE001
-            return []
 
 
 SOURCES = {"giphy": GiphySource, "tenor": TenorSource}
@@ -382,6 +333,17 @@ def count_frames(path: Path) -> int:
         return 0
 
 
+def _measure(path: Path) -> tuple[int, int]:
+    """A GIF's pixel size, or (0, 0) if Pillow isn't installed or the file isn't here."""
+    try:
+        from PIL import Image
+
+        with Image.open(path) as image:
+            return image.size
+    except Exception:  # noqa: BLE001 — dimensions are an optimisation, never required
+        return 0, 0
+
+
 def _slugify(text: str) -> str:
     text = re.sub(r"\bGIF\b", "", text or "", flags=re.I)
     text = re.sub(r"[^a-zA-Z0-9]+", "-", text).strip("-").lower()
@@ -395,7 +357,7 @@ def _pretty_label(title: str | None, filename: str) -> str:
 
 # --- the library ---------------------------------------------------------------
 class Library:
-    """Decisions, the game's GIF folder, and the manifest that ties them together."""
+    """The game's GIF folder and the manifest, on top of curation_store's two files."""
 
     def __init__(self):
         self.lock = threading.RLock()
@@ -404,102 +366,72 @@ class Library:
         # Set once the API source exists; needed to re-fetch a Giphy card whose file was
         # deleted, since a Giphy id resolves to a media URL only through the API.
         self.source = None
-        self.decisions: dict[str, dict] = {}
-        if DECISIONS.exists():
-            try:
-                self.decisions = json.loads(DECISIONS.read_text())
-            except json.JSONDecodeError:
-                print("⚠️  decisions.json was unreadable — starting a fresh one")
-        self._migrate_verdicts()
 
-    def _migrate_verdicts(self) -> None:
-        """Carry over decisions made when each GIF had exactly one verdict.
-
-        The old shape was {"verdict": "keep"|"adult"|"millennial"|"skip"}; sets replaced it
-        so a GIF can be in several modes at once. Nothing is thrown away — a skip becomes
-        "in no sets", which still means it won't come round again.
-        """
-        legacy = {"keep": ["normal"], "adult": ["adult"], "millennial": ["millennial"], "skip": []}
-        changed = 0
-        for entry in self.decisions.values():
-            if "sets" not in entry and "verdict" in entry:
-                entry["sets"] = legacy.get(entry.pop("verdict"), [])
-                changed += 1
-        if changed:
-            self._save()
-            print(f"  migrated {changed} earlier decision(s) to the new set tags")
-
-    # -- decisions --------------------------------------------------------
-    def seen(self, source_id: str) -> bool:
-        return source_id in self.decisions
-
+    # -- lookups ----------------------------------------------------------
     def sets_of(self, source_id: str) -> list[str]:
-        return list((self.decisions.get(source_id) or {}).get("sets") or [])
-
-    def mark_seen(self, source_id: str, candidate: dict | None = None) -> None:
-        with self.lock:
-            entry = self.decisions.setdefault(source_id, {"sets": [], "title": (candidate or {}).get("title", "")})
-            entry.setdefault("sets", [])
-            self._save()
+        return list((store.library().get(source_id) or {}).get("sets") or [])
 
     def counts(self) -> dict:
+        cards = store.library()
         per_set = {name: 0 for name in SETS}
-        for entry in self._manifest_entries():
-            for name in entry.get("sets", []):
+        for card in cards.values():
+            for name in card.get("sets", []):
                 if name in per_set:
                     per_set[name] += 1
         return {
             "sets": per_set,
-            "seen": len(self.decisions),
-            "tagged": sum(1 for d in self.decisions.values() if d.get("sets")),
+            "ignored": len(store.ignored()),
             "target": CARDS_PER_MODE,
-            "in_game": len(self._manifest_entries()),
+            "in_game": len(cards),
         }
-
-    def _save(self) -> None:
-        DECISIONS.write_text(json.dumps(self.decisions, indent=2, sort_keys=True) + "\n")
 
     # -- membership -------------------------------------------------------
     def apply_sets(self, candidate: dict, wanted: list[str]) -> dict:
         """Make this GIF belong to exactly `wanted`.
 
-        Newly in a set -> the file is fetched. Out of every set -> the file goes away
-        again. Nothing else about it changes, so toggling is cheap and reversible.
+        Newly in a set -> the file is fetched. Out of every set -> it leaves the library
+        and the file goes away. Counters survive re-tagging, because a card you move from
+        Normal to 18+ is the same card with the same history.
         """
         wanted = [s for s in wanted if s in SETS]
         source_id = candidate["source_id"]
         with self.lock:
-            entry = self.decisions.setdefault(source_id, {"sets": []})
-            entry["title"] = candidate.get("title", entry.get("title", ""))
-            entry["query"] = candidate.get("query", entry.get("query", ""))
-            entry["page"] = candidate.get("page", entry.get("page"))
-            # Giphy cards are found again by their id, so the id in the key is enough.
-            # Anything else has only its link, and without it the card could never be
-            # rebuilt on another machine — so that is the one field we must not lose.
-            if candidate.get("url"):
-                entry["url"] = candidate["url"]
-            filename = entry.get("file")
+            existing = store.library().get(source_id) or {}
+            filename = existing.get("file")
 
             if wanted and not filename:
                 filename = self._download(candidate)
-                entry["file"] = filename
             if wanted:
+                # Tagging something is the clearest possible statement that it is not
+                # unfunny, so it stops being ignored.
+                store.unignore(source_id)
+                card = store.put(
+                    source_id,
+                    {
+                        "file": filename,
+                        "title": candidate.get("title") or existing.get("title", ""),
+                        "sets": wanted,
+                        "page": candidate.get("page") or existing.get("page"),
+                        # Giphy cards are found again by their id, so the key is enough.
+                        # Anything else has only its link, and without it the card could
+                        # never be rebuilt elsewhere — the one field we must not lose.
+                        "url": candidate.get("url") or existing.get("url"),
+                    },
+                )
                 self._write_manifest_entry(
                     filename=filename,
-                    label=_pretty_label(entry.get("title"), filename),
+                    label=_pretty_label(card.get("title"), filename),
                     sets=wanted,
                     source=source_id,
+                    card=card,
                 )
             elif filename:
                 self._remove_manifest_entry(filename)
                 target = GIF_DIR / filename
                 if target.exists():
                     target.unlink()
-                entry.pop("file", None)
-
-            entry["sets"] = wanted
-            self._save()
-            return {"sets": wanted, "file": entry.get("file")}
+                store.forget(source_id)
+            return {"sets": wanted, "file": filename if wanted else None}
 
     def _download(self, candidate: dict) -> str:
         slug = _slugify(candidate.get("title") or candidate.get("query") or "gif")
@@ -517,50 +449,72 @@ class Library:
 
     # -- the library: what is already in the game --------------------------
     def cards(self) -> list[dict]:
-        """Every card that is in at least one set — what the Library tab shows."""
+        """Every card in the game — what the Library tab shows."""
         out = []
-        for source_id, entry in self.decisions.items():
-            if not entry.get("sets") or not entry.get("file"):
+        for source_id, entry in store.library().items():
+            if not entry.get("file"):
                 continue
             out.append(
                 {
                     "source_id": source_id,
                     "file": entry["file"],
                     "title": _pretty_label(entry.get("title"), entry["file"]),
-                    "sets": list(entry["sets"]),
+                    "sets": list(entry.get("sets") or []),
                     "page": entry.get("page"),
+                    "added": entry.get("added"),
+                    "uses": int(entry.get("uses", 0)),
+                    "wins": int(entry.get("wins", 0)),
                     "on_disk": (GIF_DIR / entry["file"]).is_file(),
                 }
             )
         out.sort(key=lambda c: c["title"].lower())
         return out
 
+    def ignored_cards(self) -> list[dict]:
+        """Cards you rejected. Kept only so search can skip them, and so a mistake here
+        is undoable — nothing else in the app reads this list."""
+        out = [
+            {"source_id": sid, "title": e.get("title") or sid, "page": e.get("page"), "ignored": e.get("ignored")}
+            for sid, e in store.ignored().items()
+        ]
+        out.sort(key=lambda c: (c.get("ignored") or ""), reverse=True)
+        return out
+
     def retag(self, source_id: str, wanted: list[str]) -> dict:
         """Change which sets a card that is already in the library belongs to.
 
-        This is the Library tab's whole job, and it is deliberately the same code path as
-        tagging during discovery — so a card moved from Normal to 18+ here behaves exactly
-        as if it had been tagged that way in the first place.
+        Deliberately the same code path as tagging during discovery, so a card moved from
+        Normal to 18+ here behaves exactly as if it had been tagged that way originally.
         """
-        entry = self.decisions.get(source_id)
+        entry = store.library().get(source_id)
         if not entry:
             raise KeyError(source_id)
         candidate = {
             "source_id": source_id,
             "title": entry.get("title", ""),
-            "query": entry.get("query", ""),
             "page": entry.get("page"),
             "url": entry.get("url"),
         }
         # Re-tagging something whose file was deleted has to fetch it again; the link
         # that brought it in the first time is the one that brings it back.
         if wanted and not (entry.get("file") and (GIF_DIR / entry["file"]).is_file()):
-            entry.pop("file", None)
             candidate["download"] = self.download_url_for(source_id, entry)
         return self.apply_sets(candidate, wanted)
 
+    def reject(self, source_id: str, title: str = "", page: str | None = None) -> dict:
+        """The ✕: drop it from the game *and* stop search offering it again.
+
+        Works on a card you already had and on one you have only just been shown, which
+        is why the title comes in from the caller — a search result has no library row to
+        read it from, and "giphy:26tPgV8c" is no use to anyone reviewing the list later.
+        """
+        entry = store.library().get(source_id) or {}
+        result = self.apply_sets({"source_id": source_id}, []) if entry else {"sets": [], "file": None}
+        store.ignore(source_id, title or entry.get("title", ""), page or entry.get("page"))
+        return result
+
     def download_url_for(self, source_id: str, entry: dict) -> str:
-        """Where to fetch this card from, given only what decisions.json remembers."""
+        """Where to fetch this card from, given only what the library remembers."""
         if entry.get("url"):
             return resolve_media(entry["url"])[0]
         if source_id.startswith("giphy:") and self.source is not None:
@@ -617,108 +571,25 @@ class Library:
             json.dumps({"generated": False, "count": len(entries), "gifs": entries}, indent=2) + "\n"
         )
 
-    def _write_manifest_entry(self, *, filename: str, label: str, sets: list[str], source: str) -> None:
+    def _write_manifest_entry(
+        self, *, filename: str, label: str, sets: list[str], source: str, card: dict | None = None
+    ) -> None:
         entries = [e for e in self._manifest_entries() if e.get("file") != filename]
-        entries.append(
-            {"id": Path(filename).stem, "file": filename, "label": label, "sets": sets, "source": source}
-        )
+        entry = {"id": Path(filename).stem, "file": filename, "label": label, "sets": sets, "source": source}
+        # The card's real shape, so the board can reserve the right space before the
+        # picture loads instead of cropping it into a 4:3 box.
+        width, height = (card or {}).get("w"), (card or {}).get("h")
+        if not (width and height):
+            width, height = _measure(GIF_DIR / filename)
+            if width and height:
+                store.put(source, {"w": width, "h": height})
+        if width and height:
+            entry["w"], entry["h"] = width, height
+        entries.append(entry)
         self._write_manifest(entries)
 
     def _remove_manifest_entry(self, filename: str) -> None:
         self._write_manifest([e for e in self._manifest_entries() if e.get("file") != filename])
-
-
-# --- candidate queue -----------------------------------------------------------
-class Queue:
-    """A pool of unseen candidates, refilled in batches of 50 from the API."""
-
-    def __init__(self, source, library: Library, queries: list[str], min_frames: int):
-        self.source = source
-        self.library = library
-        self.queries = queries
-        self.min_frames = min_frames
-        self.pinned: str | None = None
-        self.pool: list[dict] = []
-        self.lock = threading.RLock()
-        self.last_error: str | None = None
-        self.calls = 0
-        self.dropped_frames = 0
-
-    def pin(self, query: str | None) -> None:
-        """Focus on one search term (or None to go back to the whole pack)."""
-        with self.lock:
-            self.pinned = (query or "").strip() or None
-            self.pool.clear()
-            self.last_error = None
-
-    def take(self, count: int) -> list[dict]:
-        out = []
-        with self.lock:
-            for _ in range(count):
-                candidate = self._next_one()
-                if candidate is None:
-                    break
-                out.append(candidate)
-        return out
-
-    def _next_one(self) -> dict | None:
-        for _ in range(8):
-            while self.pool:
-                candidate = self.pool.pop()
-                if self.library.seen(candidate["source_id"]):
-                    continue
-                # 0 means the source didn't say; only drop when we know it's too few.
-                if candidate["frames"] and candidate["frames"] < self.min_frames:
-                    self.dropped_frames += 1
-                    continue
-                candidate["sets"] = []
-                return candidate
-            if not self._refill():
-                return None
-        return None
-
-    # How many different searches go into one refill when nothing is pinned. One search
-    # returns 50 results, so filling from a single term meant roughly fifty cards in a row
-    # all "found under backrooms" — you had to reload to escape a term. Blending several
-    # and shuffling makes consecutive cards come from different searches, for the same
-    # number of API calls overall (three times as many per refill, a third as often).
-    BLEND = 3
-
-    def _refill(self) -> bool:
-        if self.pinned is not None:
-            queries = [self.pinned]
-        elif self.queries:
-            queries = random.sample(self.queries, min(self.BLEND, len(self.queries)))
-        else:
-            queries = [""]
-
-        batch: list[dict] = []
-        errors = []
-        for query in queries:
-            # A random offset is what makes this a firehose instead of the same 50 GIFs.
-            try:
-                batch.extend(self.source.fetch(query, random.randrange(0, 400)))
-                self.calls += 1
-            except urllib.error.HTTPError as exc:
-                body = ""
-                try:
-                    body = exc.read().decode()[:160]
-                except Exception:  # noqa: BLE001
-                    pass
-                if exc.code in (401, 403):
-                    errors.append(f"The API rejected the key ({exc.code}). Check {self.source.key_env}. {body}")
-                elif exc.code == 429:
-                    errors.append("Rate limited — wait a minute, then keep going.")
-                else:
-                    errors.append(f"API error {exc.code}: {body}")
-            except Exception as exc:  # noqa: BLE001
-                errors.append(f"{type(exc).__name__}: {exc}")
-
-        # One dead search out of three is not worth stopping for; report only a total loss.
-        self.last_error = errors[0] if errors and not batch else None
-        random.shuffle(batch)
-        self.pool.extend(batch)
-        return bool(batch)
 
 
 # --- web app -------------------------------------------------------------------
@@ -759,7 +630,7 @@ def _safe_next(target: str | None, fallback: str) -> str:
     return target if not root or target == root or target.startswith(root + "/") else fallback
 
 
-def build_app(queue: Queue, library: Library, source, min_frames: int, password: str) -> Flask:
+def build_app(library: Library, source, password: str) -> Flask:
     app = Flask(
         __name__,
         template_folder=str(Path(__file__).parent / "templates"),
@@ -826,15 +697,35 @@ def build_app(queue: Queue, library: Library, source, min_frames: int, password:
             "curate.html",
             source=source.name,
             rating=getattr(source, "rating", ""),
-            min_frames=min_frames,
             sets=SETS,
             counts=library.counts(),
-            queries=random.sample(queue.queries, min(12, len(queue.queries))) if queue.queries else [],
         )
 
     @app.get("/api/library")
     def api_library():
-        return jsonify(cards=library.cards(), counts=library.counts())
+        return jsonify(cards=library.cards(), ignored=library.ignored_cards(), counts=library.counts())
+
+    @app.post("/api/reject")
+    def api_reject():
+        """The ✕ — out of the game, and search stops offering it."""
+        data = request.get_json(silent=True) or {}
+        source_id = data.get("source_id")
+        if not source_id:
+            return jsonify(error="bad request"), 400
+        try:
+            library.reject(source_id, (data.get("title") or "").strip(), data.get("page"))
+        except Exception as exc:  # noqa: BLE001
+            return jsonify(error=str(exc)), 502
+        return jsonify(ok=True, counts=library.counts())
+
+    @app.post("/api/unignore")
+    def api_unignore():
+        data = request.get_json(silent=True) or {}
+        source_id = data.get("source_id")
+        if not source_id:
+            return jsonify(error="bad request"), 400
+        store.unignore(source_id)
+        return jsonify(ok=True, counts=library.counts())
 
     @app.post("/api/retag")
     def api_retag():
@@ -852,7 +743,7 @@ def build_app(queue: Queue, library: Library, source, min_frames: int, password:
 
     @app.post("/api/add-link")
     def api_add_link():
-        """Take a pasted Tenor/Discord/whatever link and queue it up for tagging."""
+        """Take a pasted Tenor/Discord/whatever link and turn it into a taggable card."""
         data = request.get_json(silent=True) or {}
         added, failed = [], []
         for raw in (data.get("links") or []):
@@ -862,15 +753,51 @@ def build_app(queue: Queue, library: Library, source, min_frames: int, password:
                 failed.append({"link": raw, "why": str(exc)})
         return jsonify(ok=True, candidates=added, failed=failed, counts=library.counts())
 
-    @app.get("/api/next")
-    def api_next():
-        count = max(1, min(12, _as_int(request.args.get("n")) or 6))
+    @app.get("/api/search")
+    def api_search():
+        """One search, one page of results — whatever the API returns, unfiltered.
+
+        There is no queue and no invented search terms any more. The tool used to pick
+        from a hardcoded list of ~100 moods when nothing was typed, which produced 24% of
+        the deck while your own searches produced 76%: it was guessing at taste it had no
+        way to know. Now it asks, and shows you the lot.
+        """
+        term = (request.args.get("q") or "").strip()
+        offset = max(0, _as_int(request.args.get("offset")))
+        try:
+            found = source.fetch(term, offset)
+        except urllib.error.HTTPError as exc:
+            body = ""
+            try:
+                body = exc.read().decode()[:160]
+            except Exception:  # noqa: BLE001
+                pass
+            if exc.code in (401, 403):
+                return jsonify(error=f"The API rejected the key ({exc.code}). Check {source.key_env}. {body}"), 502
+            if exc.code == 429:
+                return jsonify(error="Rate limited — wait a minute, then try again."), 502
+            return jsonify(error=f"API error {exc.code}: {body}"), 502
+        except Exception as exc:  # noqa: BLE001
+            return jsonify(error=f"{type(exc).__name__}: {exc}"), 502
+
+        # Anything you rejected is gone from the results entirely — that is the whole
+        # job of ignored.json. Cards already in the library stay, with their sets lit up,
+        # because knowing "this one is already in Normal" is useful while you search.
+        hidden = store.ignored()
+        in_game = store.library()
+        results = []
+        for candidate in found:
+            if candidate["source_id"] in hidden:
+                continue
+            candidate["sets"] = list((in_game.get(candidate["source_id"]) or {}).get("sets") or [])
+            candidate["known"] = candidate["source_id"] in in_game
+            results.append(candidate)
         return jsonify(
-            candidates=queue.take(count),
+            results=results,
             counts=library.counts(),
-            error=queue.last_error,
-            query=queue.pinned,
-            dropped_frames=queue.dropped_frames,
+            term=term,
+            offset=offset,
+            skipped=len(found) - len(results),
         )
 
     @app.post("/api/sets")
@@ -886,45 +813,6 @@ def build_app(queue: Queue, library: Library, source, min_frames: int, password:
             return jsonify(error=f"could not save that one: {exc}"), 502
         return jsonify(ok=True, counts=library.counts(), **result)
 
-    @app.post("/api/seen")
-    def api_seen():
-        data = request.get_json(silent=True) or {}
-        candidate = data.get("candidate") or {}
-        if not candidate.get("source_id"):
-            return jsonify(error="bad request"), 400
-        library.mark_seen(candidate["source_id"], candidate)
-        return jsonify(ok=True)
-
-    @app.post("/api/query")
-    def api_query():
-        data = request.get_json(silent=True) or {}
-        queue.pin(data.get("query"))
-        return jsonify(ok=True, query=queue.pinned)
-
-    @app.get("/api/related")
-    def api_related():
-        """Suggestions for "more like this".
-
-        Giphy's related-tags endpoint is thin for oddities — "cursed" returns plenty,
-        "nuke" returns nothing — so try the search term, then the words of the GIF's own
-        title, and always hand back something clickable.
-        """
-        term = (request.args.get("term") or "").strip()
-        title = (request.args.get("title") or "").strip()
-        words = [w for w in re.split(r"[^a-zA-Z0-9]+", title.lower()) if len(w) > 2]
-        stop = {"gif", "the", "and", "for", "with", "you", "your", "not", "off", "out", "gifs"}
-        words = [w for w in words if w not in stop]
-        pairs = [" ".join(words[i : i + 2]) for i in range(len(words) - 1)]
-
-        for attempt in [term, *pairs, *words]:
-            if not attempt:
-                continue
-            tags = source.related_tags(attempt)
-            if tags:
-                return jsonify(term=attempt, tags=tags, fallback=[])
-        # Nothing related: the title's own words are still a way onwards.
-        return jsonify(term=term, tags=[], fallback=(words + [term])[:10])
-
     return app
 
 
@@ -935,14 +823,6 @@ def main() -> int:
     parser.add_argument("--source", choices=sorted(SOURCES), default="giphy")
     parser.add_argument("--api-key", default=None, help="defaults to $GIPHY_API_KEY / $TENOR_API_KEY or .env")
     parser.add_argument("--rating", default="r", help="giphy: g, pg, pg-13, r (default r — you're curating by hand)")
-    parser.add_argument(
-        "--pack",
-        action="append",
-        choices=sorted(QUERY_PACKS),
-        help="starter search terms; repeatable (default: all of them)",
-    )
-    parser.add_argument("--queries", default=None, help="comma-separated search terms, instead of the packs")
-    parser.add_argument("--min-frames", type=int, default=10, help="drop GIFs with fewer frames (default 10)")
     parser.add_argument("--port", type=int, default=5099)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument(
@@ -960,12 +840,6 @@ def main() -> int:
         print(f"  {source_class.key_help}\n")
         return 2
 
-    if args.queries:
-        queries = [q.strip() for q in args.queries.split(",") if q.strip()]
-    else:
-        packs = args.pack or sorted(QUERY_PACKS)
-        queries = [q for pack in packs for q in QUERY_PACKS[pack]]
-
     # The curator is reachable from the internet now, so it needs a password. Refusing to
     # start without one is deliberate: a silent default would be worse than no gate at all,
     # because you would think you had one.
@@ -979,19 +853,17 @@ def main() -> int:
     source = source_class(api_key, args.rating)
     library = Library()
     library.source = source
-    queue = Queue(source, library, queries, args.min_frames)
     counts = library.counts()
 
-    print(f"\n  🃏 GIF curator — {args.source}, rating {source.rating}, min {args.min_frames} frames")
+    print(f"\n  🃏 GIF curator — {args.source}, rating {source.rating}")
     print(f"      open:   http://{args.host}:{args.port}{args.prefix}")
     print(f"      into:   {GIF_DIR}")
     print(
         "      sets:   "
         + "   ".join(f"{meta['label']} {counts['sets'][name]}/{CARDS_PER_MODE}" for name, meta in SETS.items())
     )
-    print("      keys:   ← → scroll    N / E / M tag    R related    / search    X clear\n")
 
-    app = build_app(queue, library, source, args.min_frames, password)
+    app = build_app(library, source, password)
     app.wsgi_app = PrefixMiddleware(app.wsgi_app, args.prefix)
     app.run(host=args.host, port=args.port, debug=False, use_reloader=False)
     return 0

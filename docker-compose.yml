@@ -32,10 +32,14 @@ services:
     ports:
       - "127.0.0.1:${HOST_PORT:-5050}:5050"
 
-    # Swap in your own GIFs without rebuilding: drop .gif files in a folder on the host,
-    # run scripts/scan_gifs.py to write its manifest.json, then uncomment this.
-    # volumes:
-    #   - ./app/static/gifs:/app/app/static/gifs:ro
+    volumes:
+      # The cards themselves, read-only: the image ships the manifest but not the GIFs
+      # (they are not in git — see scripts/rehydrate_gifs.py), so they come from the host.
+      - ./app/static/gifs:/app/app/static/gifs:ro
+      # Writable, because the game records which cards were played and which won into
+      # curation/library.json at the end of every round. Both files are shared with the
+      # curator container, which is why every write takes a lock.
+      - ./curation:/app/curation:rw
 
     logging:
       driver: json-file
@@ -65,8 +69,6 @@ services:
       - "0.0.0.0"          # inside the container; the published port below is the gate
       - "--port"
       - "5099"
-      - "--min-frames"
-      - "${CURATOR_MIN_FRAMES:-10}"
       - "--rating"
       - "${CURATOR_RATING:-r}"
       # Served under a path on the game's domain; nginx also sends X-Forwarded-Prefix,

@@ -22,6 +22,21 @@ CODE_LENGTH = 4
 DEFAULT_IDLE_TIMEOUT = 600  # 10 minutes
 
 
+def _record_round(played: list[str], winner: str) -> None:
+    """Tell the curation library which cards were played, and which one won.
+
+    This is where the game stops being pure — deliberately at the edge, in the thing that
+    builds games, rather than inside the engine. Imported lazily and failure-tolerant: a
+    read-only or absent curation folder must cost a round of statistics, never the game.
+    """
+    try:
+        import curation_store
+
+        curation_store.record_played_ids(played, winner)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[gah] round stats not recorded: {exc}")
+
+
 class RoomStore:
     def __init__(self, idle_timeout: int = DEFAULT_IDLE_TIMEOUT):
         self.lock = threading.RLock()
@@ -51,7 +66,7 @@ class RoomStore:
     def create(self, host_pid: str) -> Game:
         with self.lock:
             code = self._fresh_code()
-            game = Game(code=code, host_pid=host_pid)
+            game = Game(code=code, host_pid=host_pid, on_round_awarded=_record_round)
             self._games[code] = game
             return game
 

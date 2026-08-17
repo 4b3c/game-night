@@ -19,7 +19,7 @@ python run.py
 ```
 
 (The GIF *files* aren't in git — see [Where the GIFs live](#where-the-gifs-live). What is
-in git is `curation/decisions.json`, and `rehydrate_gifs.py` turns that back into a full
+in git is `curation/library.json`, and `rehydrate_gifs.py` turns that back into a full
 `app/static/gifs/` in about half a minute. It needs a `GIPHY_API_KEY` in `.env`.)
 
 It prints your LAN address. Everyone in the room opens that on their phone:
@@ -93,56 +93,62 @@ export GIPHY_API_KEY=xxxxxxxx        # developers.giphy.com -> Create an App -> 
 python scripts/curate_gifs.py        # then open http://127.0.0.1:5099
 ```
 
-`←` `→` scroll through GIFs; **N**, **E**, **M** toggle membership of Normal, Eighteen+ and
-Millennial. A GIF can be in several sets at once, so a cursed one can be both Normal and
-18+. `X` removes it from everything, and tagging is reversible — untagging deletes the file
-again. Tagged GIFs land in `app/static/gifs/` and the manifest immediately, so they're in
-the game next time it starts. Scrolling past something remembers it as seen, so it won't
-come round again tomorrow (`curation/decisions.json`).
+**Discover** is a search box and a grid of results. Type anything, get 50, tag the ones
+you want. There are no built-in search terms: the tool used to invent them from a
+hardcoded list of ~100 moods, which produced under a quarter of the deck while hand-typed
+searches produced three quarters — so it stopped guessing.
 
-**Finding the weird stuff.** Type anything in the search box (`nuke`, `deep fried`,
-`cursed`) and the queue switches to it. Press **R** on a GIF you like for related tags —
-Giphy's suggestions where it has them, the GIF's own title words where it doesn't — and
-click one to keep pulling that thread. Starter terms are on screen from the start; the
-built-in packs are `reactions`, `cursed`, `millennial` and `chaos` (`--pack cursed`).
+A GIF can be in several sets at once, so a cursed one can be both Normal and 18+. Tagging
+is reversible, and untagging deletes the file again. Tagged GIFs land in
+`app/static/gifs/` and the manifest immediately, so they're in the game next time it
+starts.
 
 **Your own GIFs** — paste links into the box on the Library tab. Tenor, Discord, anywhere:
 a page gets resolved to the GIF it advertises, a direct link is used as-is. Links rather
 than file uploads, because a link is what lets the card be rebuilt on another machine.
 
-**Near-stills are filtered out** before you see them: Giphy reports a frame count and
-anything under `--min-frames` (default 10) never appears.
-
 ```bash
-python scripts/curate_gifs.py --source tenor              # Tenor instead of Giphy
-python scripts/curate_gifs.py --rating r                  # let the edgier stuff through
-python scripts/curate_gifs.py --queries "facepalm,oops"   # your own search terms
+python scripts/curate_gifs.py --source tenor    # Tenor instead of Giphy
+python scripts/curate_gifs.py --rating pg-13    # tighten what the API returns
 ```
 
 A mode needs **56 cards** before eight people can play it (28 for four); the lobby greys out
 modes that aren't ready and the curator shows a progress meter for each.
 
-**The Library tab** is the other half: every card already in the game, grouped by set, at
-its real shape. Tap N / E / M under any card to move it between sets, or ✕ to drop it from
-the game entirely. Filter by set to see one pile at a time. Discovery feeds the library;
-the library is where you tidy up.
+**Both tabs are the same grid.** Library shows what's in the game; Discover shows what a
+search turned up. Under every card are the three set buttons — tap **Normal**, **18+** or
+**Millennial** to put it in or take it out — and a ✕ that means *not funny*: the card
+leaves the game and search never offers it again. The Rejected filter lists those and can
+undo any of them.
 
 ## Where the GIFs live
 
 The GIF files are **not in git**, and the repo is public on purpose. What's committed is
-`curation/decisions.json` — every judgement you've made and the link each card came from.
-That's ~140 KB of text that diffs cleanly, versus ~70 MB of binaries that would sit in the
-history forever and make the repo heavy for anyone who clones it.
+two small JSON files in `curation/`, and they are the whole state of the deck:
+
+| | |
+|---|---|
+| `library.json` | every card in the game: the link it came from, its sets, its size, and how often it has been **played** and **won** |
+| `ignored.json` | cards you rejected with ✕ — read only by search, so they stop coming back |
+
+Both stamp when a card entered the list it's in. That's a few tens of KB of text that
+diffs cleanly, versus ~70 MB of binaries that would sit in the history forever and make
+the repo heavy for anyone who clones it.
+
+`uses` and `wins` are written by the **game**, at the end of each round: every card played
+gets a use, the winner also gets a win. So `wins / uses` is a real measure of whether a
+card is funny, earned at the table rather than guessed at when it was tagged.
 
 ```bash
-python scripts/rehydrate_gifs.py            # rebuild app/static/gifs/ from decisions.json
+python scripts/rehydrate_gifs.py            # rebuild app/static/gifs/ from library.json
 python scripts/rehydrate_gifs.py --check    # what's missing, without downloading
-python scripts/rehydrate_gifs.py --prune    # drop files no decision refers to
+python scripts/rehydrate_gifs.py --prune    # drop files the library no longer lists
 ```
 
 Two kinds of link, one script: `giphy:<id>` is looked up through the API (ids are
 permanent, media URLs aren't), and `url:<digest>` is fetched straight over https. The
-manifest is regenerated from the decisions each time, so the two can't drift.
+manifest the game reads is regenerated from `library.json` each time, so the two can't
+drift.
 
 The one exception is links that expire — a Discord attachment URL is signed and dies after
 about a day. Those cards keep their bytes in `curation/originals/`, which *is* committed.

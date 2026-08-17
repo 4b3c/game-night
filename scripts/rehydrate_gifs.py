@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Rebuild app/static/gifs/ from curation/decisions.json.
+"""Rebuild app/static/gifs/ from curation/library.json.
 
 The GIF files are not in git. They are other people's work and this repo is public, so
 shipping 47 MB of Fox and Comedy Central clips in the history is both rude and the kind
-of thing that gets a repo taken down — code and all. What *is* in git is decisions.json:
-every judgement you have made and the link each card came from. That is the part that
-took real effort, and it is 140 KB of text that diffs cleanly.
+of thing that gets a repo taken down — code and all. What *is* in git is
+curation/library.json: every card you kept and the link it came from. That is the part
+that took real effort, and it is a few tens of KB of text that diffs cleanly.
 
 So a fresh clone, or a second laptop, gets its deck back with:
 
@@ -39,7 +39,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from curate_gifs import (  # noqa: E402 — needs the path above
-    DECISIONS,
     GIF_DIR,
     MANIFEST,
     ORIGINALS,
@@ -49,6 +48,7 @@ from curate_gifs import (  # noqa: E402 — needs the path above
     load_dotenv,
     resolve_media,
 )
+import curation_store as store  # noqa: E402
 
 # Giphy's by-id endpoint takes up to 100 at a time, which is one round trip for a
 # deck of any realistic size.
@@ -88,13 +88,9 @@ def measure(path: Path) -> tuple[int, int]:
         return 0, 0
 
 
-def wanted(decisions: dict) -> dict[str, dict]:
-    """The cards that should exist on disk: everything tagged into at least one set."""
-    return {
-        source_id: entry
-        for source_id, entry in decisions.items()
-        if entry.get("sets") and entry.get("file")
-    }
+def wanted(cards: dict) -> dict[str, dict]:
+    """The cards that should exist on disk: everything in the library with a file."""
+    return {sid: card for sid, card in cards.items() if card.get("sets") and card.get("file")}
 
 
 def resolve_giphy(source_ids: list[str], source: GiphySource) -> dict[str, str]:
@@ -117,7 +113,7 @@ def resolve_giphy(source_ids: list[str], source: GiphySource) -> dict[str, str]:
 def rebuild_manifest(decisions: dict) -> int:
     """Regenerate the manifest from the decisions, so the two can never drift.
 
-    The manifest is what the game reads; decisions.json is what a human edited. Deriving
+    The manifest is what the game reads; library.json is what a human edited. Deriving
     one from the other means a card can't be tagged Millennial in one file and Normal in
     the other.
 
@@ -158,11 +154,11 @@ def main() -> int:
     args = parser.parse_args()
 
     load_dotenv()
-    if not DECISIONS.exists():
-        print(f"  no {DECISIONS} — nothing to rebuild from")
+    if not store.LIBRARY.exists():
+        print(f"  no {store.LIBRARY} — nothing to rebuild from")
         return 2
 
-    decisions = json.loads(DECISIONS.read_text())
+    decisions = store.library()
     GIF_DIR.mkdir(parents=True, exist_ok=True)
     targets = wanted(decisions)
 
@@ -217,7 +213,7 @@ def main() -> int:
             failed += 1
             continue
         try:
-            # What decisions.json remembers for a pasted link is the *page* — a Tenor
+            # What the library remembers for a pasted link is the *page* — a Tenor
             # URL is HTML wrapping the GIF, so it has to be resolved the same way the
             # curator resolved it when the link was first pasted.
             if source_id.startswith("url:"):
@@ -238,8 +234,11 @@ def main() -> int:
                 pruned += 1
 
     rebuilt = rebuild_manifest(decisions)
-    # Measuring fills in sizes decisions.json didn't have yet; keep them.
-    DECISIONS.write_text(json.dumps(decisions, indent=2, sort_keys=True) + "\n")
+    # Measuring fills in sizes the library didn't have yet; keep them.
+    store.update_library(lambda cards: [
+        cards[sid].update({"w": c["w"], "h": c["h"]})
+        for sid, c in decisions.items() if sid in cards and c.get("w")
+    ])
     print(
         f"\n      {fetched} fetched ({total_bytes / 1_000_000:.1f} MB)"
         + (f", {copied} from kept copies" if copied else "")

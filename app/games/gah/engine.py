@@ -172,12 +172,17 @@ class Game:
         *,
         rng: random.Random | None = None,
         now: Callable[[], float] = time.time,
+        on_round_awarded: Callable[[list[str], str], None] | None = None,
     ):
         self.code = code
         self.host_pid = host_pid
         self.options = Options()
         self._rng = rng or random.Random()
         self._now = now
+        # Told (cards played, winning card) once a round is decided. Defaults to doing
+        # nothing, which is what keeps this module free of I/O and the tests hermetic —
+        # the composition root supplies the real recorder.
+        self._on_round_awarded = on_round_awarded
 
         self.version = 0
         self.created_at = self._now()
@@ -480,7 +485,17 @@ class Game:
             winner.score += 1
 
         # Played cards go to the discard pile so a long night can recycle them.
-        self._gif_deck.discard(*[s.gif_id for s in self.submissions])
+        played = [s.gif_id for s in self.submissions]
+        self._gif_deck.discard(*played)
+
+        # A finished round is the only honest place to count a card as played: it covers
+        # timer auto-plays, and a round abandoned halfway inflates nothing. Bookkeeping
+        # must never be able to spoil a game, hence the swallow.
+        if self._on_round_awarded is not None:
+            try:
+                self._on_round_awarded(played, submission.gif_id)
+            except Exception as exc:  # noqa: BLE001
+                print(f"[gah] could not record round stats: {exc}")
 
         if winner is not None and winner.score >= self.options.target_score:
             self.champion_pid = winner.pid

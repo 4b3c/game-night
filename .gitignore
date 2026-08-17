@@ -213,13 +213,15 @@ node_modules/
 !.env.example
 
 # The GIF files themselves stay out of git: they are other people's work and this repo
-# is public. What travels instead is curation/decisions.json — every judgement, and the
-# link each card came from — which scripts/rehydrate_gifs.py turns back into this folder.
+# is public. What travels instead is curation/library.json — every card and the link it
+# came from — which scripts/rehydrate_gifs.py turns back into this folder.
 app/static/gifs/*.gif
 
-# Uploaded originals are a staging area; once a card is tagged it is recorded by its
-# link in decisions.json, which is what makes it reproducible on another machine.
+# Uploaded originals were a staging area in the old upload flow; cards arrive as links
+# now, recorded in curation/library.json, which is what makes them reproducible.
 /curation/imported/
+# the advisory lock the game and the curator share when writing the two json files
+/curation/.lock
 
 # per-server compose tweaks
 docker-compose.override.yml

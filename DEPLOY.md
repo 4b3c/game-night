@@ -10,7 +10,7 @@ git clone https://github.com/4b3c/game-night.git
 cd game-night
 cp .env.example .env
 nano .env                      # set SECRET_KEY and GIPHY_API_KEY; leave the rest for now
-python3 scripts/rehydrate_gifs.py   # pull down the cards decisions.json describes
+python3 scripts/rehydrate_gifs.py   # pull down the cards library.json describes
 docker compose up -d --build
 curl localhost:5050/healthz    # {"players":0,"rooms":0,"status":"ok"}
 ```
@@ -140,25 +140,17 @@ All optional — every one has a working default. See `.env.example`.
 
 ## Getting your curated GIFs onto the server
 
-The GIF files aren't in git — `curation/decisions.json` is, and
+The GIF files aren't in git — `curation/library.json` is, and
 `python scripts/rehydrate_gifs.py` rebuilds the folder from it (see the README). On the
 server that's the easiest way to fill a fresh checkout; after that, curate on the server
 directly and the files never need to move at all.
 
-The image ships the manifest but no GIFs, so the container must read the folder from disk.
-One-time setup:
+The image ships the manifest but no GIFs, so the container reads both the GIF folder and
+`curation/` from disk — `docker-compose.yml` mounts them, nothing extra to set up. The
+curation mount is writable because the game records which cards were played and won there
+at the end of every round.
 
-```bash
-cat > /opt/game-night/docker-compose.override.yml <<'YAML'
-services:
-  app:
-    volumes:
-      - ./app/static/gifs:/app/app/static/gifs:ro
-YAML
-docker compose up -d
-```
-
-After that, every batch is one command from your laptop:
+To send a batch up from your laptop instead:
 
 ```bash
 GAH_HOST=root@your-server ./scripts/push_gifs.sh
@@ -185,11 +177,10 @@ cd /opt/game-night
 CURATOR_PASSWORD=four-random-words-is-plenty   # REQUIRED — it won't start without one
 CURATOR_BIND=127.0.0.1                         # nginx reaches it; the internet doesn't
 CURATOR_PREFIX=/curate
-GIPHY_API_KEY=...                              # curator only; the game doesn't use it
-CURATOR_MIN_FRAMES=10
+GIPHY_API_KEY=...                              # curator and rehydrate; the game itself doesn't use it
 CURATOR_RATING=r
 
-# the folders the curator writes to must be writable by the container user
+# both containers write here: the curator saves cards, the game saves round statistics
 chown -R 10001:10001 app/static/gifs curation
 
 docker compose --profile curator up -d --build
