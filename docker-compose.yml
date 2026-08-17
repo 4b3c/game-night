@@ -79,6 +79,9 @@ services:
       # the next game — the app re-reads the manifest when it changes.
       - ./app/static/gifs:/app/app/static/gifs:rw
       - ./curation:/app/curation:rw
+      # The tool itself, read-only: tweaking the curator UI then needs a `restart`, not a
+      # rebuild. (The game deliberately doesn't do this — it runs what was built.)
+      - ./scripts:/app/scripts:ro
     # The image's healthcheck asks the *game* about /healthz on 5050; this container runs
     # the curator on 5099 instead, so it needs its own.
     healthcheck:
