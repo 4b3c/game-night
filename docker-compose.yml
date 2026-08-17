@@ -48,10 +48,10 @@ services:
   #   docker compose --profile curator up -d curator
   #   docker compose --profile curator down
   #
-  # CURATOR_BIND decides who can reach it, and it is the only thing standing between this
-  # tool and the internet: it has no login. Default 127.0.0.1 = this machine only. On a
-  # server, set it to your Tailscale address so it's reachable from your own devices and
-  # nothing else — never 0.0.0.0.
+  # It has a password (CURATOR_PASSWORD, required — it refuses to start without one), so
+  # it can be published for friends to help. Behind the proxy it lives at /curate on the
+  # game's domain, which is why it binds to localhost by default: nginx reaches it, the
+  # internet only reaches it through nginx. See DEPLOY.md.
   curator:
     profiles: ["curator"]
     build: .
@@ -69,9 +69,17 @@ services:
       - "${CURATOR_MIN_FRAMES:-10}"
       - "--rating"
       - "${CURATOR_RATING:-r}"
+      # Served under a path on the game's domain; nginx also sends X-Forwarded-Prefix,
+      # and either one is enough for the links it generates to come back here.
+      - "--prefix"
+      - "${CURATOR_PREFIX:-/curate}"
     environment:
       GIPHY_API_KEY: ${GIPHY_API_KEY:-}
       TENOR_API_KEY: ${TENOR_API_KEY:-}
+      # Required. The container exits immediately if this is empty.
+      CURATOR_PASSWORD: ${CURATOR_PASSWORD:-}
+      # Signs the curator's own session cookie; falls back to SECRET_KEY.
+      CURATOR_SECRET_KEY: ${CURATOR_SECRET_KEY:-}
     ports:
       - "${CURATOR_BIND:-127.0.0.1}:5099:5099"
     volumes:

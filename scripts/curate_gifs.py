@@ -37,26 +37,30 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import hmac
 import json
 import os
 import random
 import re
-import shutil
+import secrets
 import sys
 import threading
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template, request, send_from_directory
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
 ROOT = Path(__file__).resolve().parent.parent
 GIF_DIR = ROOT / "app" / "static" / "gifs"
 MANIFEST = GIF_DIR / "manifest.json"
 STATE_DIR = ROOT / "curation"
 DECISIONS = STATE_DIR / "decisions.json"
-IMPORTED = STATE_DIR / "imported"
+# Bytes for cards whose link will rot. Committed, unlike app/static/gifs — see
+# keep_original() for what qualifies and why it has to be so few files.
+ORIGINALS = STATE_DIR / "originals"
 
 # The sets a GIF can belong to. These names are the mode ids in app/games/gah/decks.py.
 SETS = {
@@ -94,6 +98,13 @@ QUERY_PACKS = {
 }
 
 USER_AGENT = "gifs-against-humanity-curator/2.0 (local curation tool)"
+
+# Only ever used to suggest a passphrase when there isn't one. Four of these is about 40
+# bits — plenty against a login that allows five guesses a minute, and sayable down a pub.
+WORDS = (
+    "amber banjo cactus dawn ember fable glimmer harbour ivory jangle kettle lantern "
+    "meadow nutmeg orbit pebble quiver ribbon saffron thistle umber velvet walnut zephyr"
+).split()
 
 
 # --- sources -------------------------------------------------------------------
@@ -253,6 +264,100 @@ def load_dotenv() -> None:
         os.environ.setdefault(key.strip(), value.strip().strip("'\""))
 
 
+def resolve_media(url: str) -> tuple[str, str]:
+    """Turn a link a human pasted into a link to actual GIF bytes, plus a title.
+
+    A Discord attachment already points at the file. A Tenor or Giphy *page* is HTML
+    wrapping the thing you want, and every one of them advertises the real file as
+    `og:image` — the same tag that makes a link preview appear in chat. That is a far
+    steadier handle than scraping <img> tags, and it needs no API key for either site.
+
+    Returns (media_url, title). The title is best-effort; the caller has a fallback.
+    """
+    request_obj = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(request_obj, timeout=25) as response:
+        content_type = response.headers.get_content_type()
+        if not content_type.startswith("text/html"):
+            return url, ""  # already the file itself
+        body = response.read(200_000).decode("utf-8", "replace")
+
+    def meta(prop: str) -> str | None:
+        for pattern in (
+            rf'<meta[^>]+property=["\']{prop}["\'][^>]+content=["\']([^"\']+)',
+            rf'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']{prop}["\']',
+        ):
+            found = re.search(pattern, body, re.I)
+            if found:
+                return found.group(1)
+        return None
+
+    media = meta("og:image")
+    if not media:
+        raise ValueError("that page doesn't advertise a GIF (no og:image)")
+    return _lighter_rendition(media), _clean_title(meta("og:title") or "")
+
+
+# A hand is seven cards loading at once, so a card that weighs more than this is worth
+# trading resolution for. Same budget the Giphy path uses.
+MAX_CARD_BYTES = 2_000_000
+
+
+def _lighter_rendition(media: str) -> str:
+    """Swap a heavyweight Tenor GIF for its small variant, but only if it is heavy.
+
+    Tenor publishes each GIF at 640px (`…AAAAd`) and 220px (`…AAAAM`) with nothing in
+    between, so this is a real trade rather than a tidy-up: 640 looks right on a phone
+    and most of them are affordable, but the occasional 4.7 MB card is not worth it when
+    seven of them land at once. Anything that isn't Tenor is left exactly as it is.
+    """
+    # Tenor labels the big rendition AAAAd or AAAAC depending on the upload; the small
+    # one is always AAAAM, on the host without the /m/ path.
+    found = re.match(r"https://media\d*\.tenor\.com/m/([A-Za-z0-9_\-]+)AAAA[dC]/(.+)$", media)
+    if not found:
+        return media
+    ident, name = found.groups()
+
+    weight = 0
+    for _ in range(2):  # one retry: a flaky HEAD shouldn't silently ship a 5 MB card
+        try:
+            request_obj = urllib.request.Request(media, headers={"User-Agent": USER_AGENT}, method="HEAD")
+            with urllib.request.urlopen(request_obj, timeout=15) as response:
+                weight = _as_int(response.headers.get("Content-Length"))
+            break
+        except Exception:  # noqa: BLE001
+            continue
+    if 0 < weight <= MAX_CARD_BYTES:
+        return media
+    if not weight:
+        return media  # couldn't tell — keep the sharper one rather than guess
+    return f"https://media.tenor.com/{ident}AAAAM/{name}"
+
+
+def keep_original(url: str) -> bool:
+    """Whether this link is the expiring kind, so the bytes must be kept alongside it.
+
+    A Discord attachment URL is signed and carries its own expiry (`?ex=<hex unix>`),
+    typically about a day out — follow it next week and you get a 404, which would make
+    the card unrecoverable. Tenor and Giphy links keep working, so those stay links and
+    stay out of git. This is the deliberate exception, and it should apply to a handful
+    of files, never a library.
+    """
+    query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+    return bool(query.get("ex") or query.get("Expires") or query.get("X-Amz-Expires"))
+
+
+def _clean_title(title: str) -> str:
+    """Strip the SEO tail these sites put in og:title.
+
+    Tenor sends "Cat Poor GIF - Cat Poor - Discover & Share GIFs": the name, then the
+    tags, then boilerplate. Only the first segment is the name, and without this every
+    card ends up called "…Discover Amp Share Gifs".
+    """
+    head = re.split(r"\s+[-–|]\s+", title.strip())[0]
+    head = re.sub(r"\bdiscover\s*&?a?m?p?;?\s*share\s*gifs?\b", "", head, flags=re.I)
+    return re.sub(r"\s+", " ", re.sub(r"\bGIFs?\b", "", head, flags=re.I)).strip()
+
+
 def _get_json(url: str) -> dict:
     request_obj = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(request_obj, timeout=20) as response:
@@ -295,8 +400,10 @@ class Library:
     def __init__(self):
         self.lock = threading.RLock()
         STATE_DIR.mkdir(exist_ok=True)
-        IMPORTED.mkdir(parents=True, exist_ok=True)
         GIF_DIR.mkdir(parents=True, exist_ok=True)
+        # Set once the API source exists; needed to re-fetch a Giphy card whose file was
+        # deleted, since a Giphy id resolves to a media URL only through the API.
+        self.source = None
         self.decisions: dict[str, dict] = {}
         if DECISIONS.exists():
             try:
@@ -366,6 +473,11 @@ class Library:
             entry["title"] = candidate.get("title", entry.get("title", ""))
             entry["query"] = candidate.get("query", entry.get("query", ""))
             entry["page"] = candidate.get("page", entry.get("page"))
+            # Giphy cards are found again by their id, so the id in the key is enough.
+            # Anything else has only its link, and without it the card could never be
+            # rebuilt on another machine — so that is the one field we must not lose.
+            if candidate.get("url"):
+                entry["url"] = candidate["url"]
             filename = entry.get("file")
 
             if wanted and not filename:
@@ -395,25 +507,96 @@ class Library:
         filename = f"{slug}-{unique}.gif"
         request_obj = urllib.request.Request(candidate["download"], headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(request_obj, timeout=30) as response:
-            (GIF_DIR / filename).write_bytes(response.read())
+            payload = response.read()
+        (GIF_DIR / filename).write_bytes(payload)
+        # A link with an expiry can't bring this card back tomorrow, so keep the bytes.
+        if candidate.get("url") and keep_original(candidate["url"]):
+            ORIGINALS.mkdir(parents=True, exist_ok=True)
+            (ORIGINALS / filename).write_bytes(payload)
         return filename
 
-    # -- import your own --------------------------------------------------
-    def stash_upload(self, storage) -> dict:
-        """Keep an uploaded GIF aside; it becomes a candidate like any other."""
-        raw = storage.read()
-        digest = hashlib.sha1(raw).hexdigest()[:10]
-        name = f"{_slugify(Path(storage.filename or 'dropped').stem)}-{digest}.gif"
-        path = IMPORTED / name
-        path.write_bytes(raw)
+    # -- the library: what is already in the game --------------------------
+    def cards(self) -> list[dict]:
+        """Every card that is in at least one set — what the Library tab shows."""
+        out = []
+        for source_id, entry in self.decisions.items():
+            if not entry.get("sets") or not entry.get("file"):
+                continue
+            out.append(
+                {
+                    "source_id": source_id,
+                    "file": entry["file"],
+                    "title": _pretty_label(entry.get("title"), entry["file"]),
+                    "sets": list(entry["sets"]),
+                    "page": entry.get("page"),
+                    "on_disk": (GIF_DIR / entry["file"]).is_file(),
+                }
+            )
+        out.sort(key=lambda c: c["title"].lower())
+        return out
+
+    def retag(self, source_id: str, wanted: list[str]) -> dict:
+        """Change which sets a card that is already in the library belongs to.
+
+        This is the Library tab's whole job, and it is deliberately the same code path as
+        tagging during discovery — so a card moved from Normal to 18+ here behaves exactly
+        as if it had been tagged that way in the first place.
+        """
+        entry = self.decisions.get(source_id)
+        if not entry:
+            raise KeyError(source_id)
+        candidate = {
+            "source_id": source_id,
+            "title": entry.get("title", ""),
+            "query": entry.get("query", ""),
+            "page": entry.get("page"),
+            "url": entry.get("url"),
+        }
+        # Re-tagging something whose file was deleted has to fetch it again; the link
+        # that brought it in the first time is the one that brings it back.
+        if wanted and not (entry.get("file") and (GIF_DIR / entry["file"]).is_file()):
+            entry.pop("file", None)
+            candidate["download"] = self.download_url_for(source_id, entry)
+        return self.apply_sets(candidate, wanted)
+
+    def download_url_for(self, source_id: str, entry: dict) -> str:
+        """Where to fetch this card from, given only what decisions.json remembers."""
+        if entry.get("url"):
+            return resolve_media(entry["url"])[0]
+        if source_id.startswith("giphy:") and self.source is not None:
+            found = _get_json(
+                "https://api.giphy.com/v1/gifs/"
+                + urllib.parse.quote(source_id.split(":", 1)[1])
+                + f"?api_key={self.source.api_key}"
+            )
+            media = self.source._rendition((found.get("data") or {}).get("images", {}))
+            if media:
+                return media
+        raise ValueError("no link recorded for that card")
+
+    # -- add your own, by link --------------------------------------------
+    def candidate_from_link(self, url: str) -> dict:
+        """Make a candidate out of a pasted link — Discord, Tenor, anywhere.
+
+        The *page* URL is what gets remembered, not the media URL it resolves to today:
+        CDN paths get re-pointed, but the link you copied out of Discord keeps working,
+        and it is what scripts/rehydrate_gifs.py will follow on the next machine.
+        """
+        url = url.strip()
+        if not url.lower().startswith(("http://", "https://")):
+            raise ValueError("that doesn't look like a link")
+        media, title = resolve_media(url)
         return {
-            "source_id": f"local:{digest}",
-            "title": Path(storage.filename or name).stem.replace("-", " ").replace("_", " "),
-            "preview": f"/imported/{name}",
-            "download": path.resolve().as_uri(),
-            "page": None,
-            "query": "your files",
-            "frames": count_frames(path),
+            "source_id": f"url:{hashlib.sha1(url.encode()).hexdigest()[:10]}",
+            "title": title or Path(urllib.parse.urlparse(url).path).stem.replace("-", " "),
+            "preview": media,
+            "download": media,
+            "url": url,
+            "page": url,
+            "query": "your links",
+            # No API says how many frames a pasted link has, and 0 means "unknown",
+            # which the frame filter lets through rather than dropping.
+            "frames": 0,
             "local": True,
         }
 
@@ -443,18 +626,6 @@ class Library:
 
     def _remove_manifest_entry(self, filename: str) -> None:
         self._write_manifest([e for e in self._manifest_entries() if e.get("file") != filename])
-
-    def drop_filler(self) -> int:
-        """Delete the generated placeholder cards once real ones are in."""
-        with self.lock:
-            removed = 0
-            for path in sorted(GIF_DIR.glob("gif_[0-9][0-9][0-9].gif")):
-                path.unlink()
-                removed += 1
-            self._write_manifest(
-                [e for e in self._manifest_entries() if not re.fullmatch(r"gif_\d{3}\.gif", e.get("file", ""))]
-            )
-            return removed
 
 
 # --- candidate queue -----------------------------------------------------------
@@ -536,13 +707,80 @@ class Queue:
 
 
 # --- web app -------------------------------------------------------------------
-def build_app(queue: Queue, library: Library, source, min_frames: int) -> Flask:
+class PrefixMiddleware:
+    """Let the curator live under a path like /curate on a domain it shares.
+
+    nginx forwards the original prefix in X-Forwarded-Prefix; moving it into SCRIPT_NAME
+    is what makes url_for() emit /curate/login instead of /login — otherwise every
+    redirect would land on the game instead of here.
+    """
+
+    def __init__(self, app, prefix: str = ""):
+        self.app = app
+        self.prefix = "/" + prefix.strip("/") if prefix.strip("/") else ""
+
+    def __call__(self, environ, start_response):
+        prefix = environ.get("HTTP_X_FORWARDED_PREFIX", self.prefix).rstrip("/")
+        if prefix:
+            environ["SCRIPT_NAME"] = prefix
+            path = environ.get("PATH_INFO", "")
+            if path.startswith(prefix):
+                environ["PATH_INFO"] = path[len(prefix) :] or "/"
+        return self.app(environ, start_response)
+
+
+def build_app(queue: Queue, library: Library, source, min_frames: int, password: str) -> Flask:
     app = Flask(
         __name__,
         template_folder=str(Path(__file__).parent / "templates"),
         static_folder=str(ROOT / "app" / "static"),
         static_url_path="/static",
     )
+    # Signs the "you're in" cookie. Reusing the game's key is fine — different cookie
+    # name, same box — but a curator-specific one keeps the two independent.
+    app.secret_key = os.environ.get("CURATOR_SECRET_KEY") or os.environ.get("SECRET_KEY") or os.urandom(32)
+    app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
+
+    # Whoever has the password can retag anything, which is the point — this gate exists
+    # to keep the internet at large out, not to tell friends apart.
+    attempts: dict[str, list[float]] = {}
+
+    def throttled(ip: str) -> bool:
+        """Five wrong guesses a minute, per address. Enough to stop a script, not enough
+        to lock out someone fat-fingering a passphrase on a phone."""
+        now = time.monotonic()
+        recent = [t for t in attempts.get(ip, []) if now - t < 60]
+        attempts[ip] = recent
+        return len(recent) >= 5
+
+    @app.before_request
+    def guard():
+        if session.get("curator") or request.endpoint in {"login", "static"}:
+            return None
+        if request.path.startswith("/api/"):
+            return jsonify(error="not signed in"), 401
+        return redirect(url_for("login", next=request.path))
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        error = None
+        if request.method == "POST":
+            ip = request.headers.get("X-Real-IP") or request.remote_addr or "?"
+            if throttled(ip):
+                error = "Too many tries — wait a minute."
+            elif hmac.compare_digest(request.form.get("password", ""), password):
+                session["curator"] = True
+                session.permanent = True
+                return redirect(request.args.get("next") or url_for("index"))
+            else:
+                attempts.setdefault(ip, []).append(time.monotonic())
+                error = "That's not it."
+        return render_template("curate_login.html", error=error)
+
+    @app.post("/logout")
+    def logout():
+        session.clear()
+        return redirect(url_for("login"))
 
     @app.route("/")
     def index():
@@ -556,9 +794,35 @@ def build_app(queue: Queue, library: Library, source, min_frames: int) -> Flask:
             queries=random.sample(queue.queries, min(12, len(queue.queries))) if queue.queries else [],
         )
 
-    @app.get("/imported/<path:name>")
-    def imported(name: str):
-        return send_from_directory(IMPORTED, name)
+    @app.get("/api/library")
+    def api_library():
+        return jsonify(cards=library.cards(), counts=library.counts())
+
+    @app.post("/api/retag")
+    def api_retag():
+        data = request.get_json(silent=True) or {}
+        source_id, wanted = data.get("source_id"), data.get("sets")
+        if not source_id or not isinstance(wanted, list):
+            return jsonify(error="bad request"), 400
+        try:
+            result = library.retag(source_id, wanted)
+        except KeyError:
+            return jsonify(error="no such card"), 404
+        except Exception as exc:  # noqa: BLE001 — one bad card must not kill the app
+            return jsonify(error=str(exc)), 502
+        return jsonify(ok=True, counts=library.counts(), **result)
+
+    @app.post("/api/add-link")
+    def api_add_link():
+        """Take a pasted Tenor/Discord/whatever link and queue it up for tagging."""
+        data = request.get_json(silent=True) or {}
+        added, failed = [], []
+        for raw in (data.get("links") or []):
+            try:
+                added.append(library.candidate_from_link(raw))
+            except Exception as exc:  # noqa: BLE001
+                failed.append({"link": raw, "why": str(exc)})
+        return jsonify(ok=True, candidates=added, failed=failed, counts=library.counts())
 
     @app.get("/api/next")
     def api_next():
@@ -623,21 +887,6 @@ def build_app(queue: Queue, library: Library, source, min_frames: int) -> Flask:
         # Nothing related: the title's own words are still a way onwards.
         return jsonify(term=term, tags=[], fallback=(words + [term])[:10])
 
-    @app.post("/api/import")
-    def api_import():
-        files = request.files.getlist("files")
-        candidates, skipped = [], []
-        for storage in files:
-            if not (storage.filename or "").lower().endswith(".gif"):
-                skipped.append(storage.filename or "?")
-                continue
-            candidates.append(library.stash_upload(storage))
-        return jsonify(ok=True, candidates=candidates, skipped=skipped, counts=library.counts())
-
-    @app.post("/api/drop-filler")
-    def api_drop_filler():
-        return jsonify(ok=True, removed=library.drop_filler(), counts=library.counts())
-
     return app
 
 
@@ -658,6 +907,11 @@ def main() -> int:
     parser.add_argument("--min-frames", type=int, default=10, help="drop GIFs with fewer frames (default 10)")
     parser.add_argument("--port", type=int, default=5099)
     parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument(
+        "--prefix",
+        default="",
+        help="path this is served under, e.g. /curate (nginx can send X-Forwarded-Prefix instead)",
+    )
     args = parser.parse_args()
 
     load_dotenv()
@@ -674,13 +928,24 @@ def main() -> int:
         packs = args.pack or sorted(QUERY_PACKS)
         queries = [q for pack in packs for q in QUERY_PACKS[pack]]
 
+    # The curator is reachable from the internet now, so it needs a password. Refusing to
+    # start without one is deliberate: a silent default would be worse than no gate at all,
+    # because you would think you had one.
+    password = os.environ.get("CURATOR_PASSWORD", "").strip()
+    if not password:
+        suggestion = "-".join(secrets.choice(WORDS) for _ in range(4))
+        print("\n  No CURATOR_PASSWORD set, and this tool can retag the whole deck.")
+        print(f"  Put one in .env, e.g.  CURATOR_PASSWORD={suggestion}\n")
+        return 2
+
     source = source_class(api_key, args.rating)
     library = Library()
+    library.source = source
     queue = Queue(source, library, queries, args.min_frames)
     counts = library.counts()
 
     print(f"\n  🃏 GIF curator — {args.source}, rating {source.rating}, min {args.min_frames} frames")
-    print(f"      open:   http://{args.host}:{args.port}")
+    print(f"      open:   http://{args.host}:{args.port}{args.prefix}")
     print(f"      into:   {GIF_DIR}")
     print(
         "      sets:   "
@@ -688,9 +953,9 @@ def main() -> int:
     )
     print("      keys:   ← → scroll    N / E / M tag    R related    / search    X clear\n")
 
-    build_app(queue, library, source, args.min_frames).run(
-        host=args.host, port=args.port, debug=False, use_reloader=False
-    )
+    app = build_app(queue, library, source, args.min_frames, password)
+    app.wsgi_app = PrefixMiddleware(app.wsgi_app, args.prefix)
+    app.run(host=args.host, port=args.port, debug=False, use_reloader=False)
     return 0
 
 

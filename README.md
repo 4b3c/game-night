@@ -14,13 +14,13 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
 
-python scripts/scan_gifs.py     # once: builds the GIF manifest from the folder
+python scripts/rehydrate_gifs.py  # once: downloads the cards this repo describes
 python run.py
 ```
 
-(The 80 filler GIFs are committed; the manifest that describes them is generated, since
-the curator rewrites it. `python scripts/make_placeholder_gifs.py` regenerates the filler
-itself and needs the dev requirements for Pillow.)
+(The GIF *files* aren't in git — see [Where the GIFs live](#where-the-gifs-live). What is
+in git is `curation/decisions.json`, and `rehydrate_gifs.py` turns that back into a full
+`app/static/gifs/` in about half a minute. It needs a `GIPHY_API_KEY` in `.env`.)
 
 It prints your LAN address. Everyone in the room opens that on their phone:
 
@@ -80,11 +80,8 @@ and timing as a CSS custom property. Change a value, reload. No build step, no n
 **The prompts** — `app/data/prompts.json`. One object per card: `{"id", "text", "blanks"}`,
 with `___` marking the blank. Add or delete freely; ids only need to be unique.
 
-**The GIFs** — use the curator below, or drop your own `.gif` files into
-`app/static/gifs/` and run `python scripts/scan_gifs.py` to rebuild the manifest (it keeps
-the mode tags of files it already knows). Aim for 56+ per mode so eight hands of seven don't
-recycle constantly. `scripts/make_placeholder_gifs.py --count 200 --clean` regenerates
-filler instead.
+**The GIFs** — use the curator below. Aim for 56+ per mode so eight hands of seven don't
+recycle constantly.
 
 ## Curating real GIFs
 
@@ -109,8 +106,9 @@ Giphy's suggestions where it has them, the GIF's own title words where it doesn'
 click one to keep pulling that thread. Starter terms are on screen from the start; the
 built-in packs are `reactions`, `cursed`, `millennial` and `chaos` (`--pack cursed`).
 
-**Your own GIFs** — drag files onto the page. The ones you already collected in Discord get
-copied in and tagged like anything else.
+**Your own GIFs** — paste links into the box on the Library tab. Tenor, Discord, anywhere:
+a page gets resolved to the GIF it advertises, a direct link is used as-is. Links rather
+than file uploads, because a link is what lets the card be rebuilt on another machine.
 
 **Near-stills are filtered out** before you see them: Giphy reports a frame count and
 anything under `--min-frames` (default 10) never appears.
@@ -122,24 +120,39 @@ python scripts/curate_gifs.py --queries "facepalm,oops"   # your own search term
 ```
 
 A mode needs **56 cards** before eight people can play it (28 for four); the lobby greys out
-modes that aren't ready and the curator shows a progress meter for each. There's a button to
-delete the 80 placeholders once you've got real ones.
+modes that aren't ready and the curator shows a progress meter for each.
 
-Curated GIFs are gitignored on purpose — they came from someone else's API and this repo is
-public. Two ways to get them into a deployed game:
+**The Library tab** is the other half: every card already in the game, grouped by set, at
+its real shape. Tap N / E / M under any card to move it between sets, or ✕ to drop it from
+the game entirely. Filter by set to see one pile at a time. Discovery feeds the library;
+the library is where you tidy up.
+
+## Where the GIFs live
+
+The GIF files are **not in git**, and the repo is public on purpose. What's committed is
+`curation/decisions.json` — every judgement you've made and the link each card came from.
+That's ~140 KB of text that diffs cleanly, versus ~70 MB of binaries that would sit in the
+history forever and make the repo heavy for anyone who clones it.
 
 ```bash
-# from your laptop: rsync the GIFs, manifest and decision history to the server
-GAH_HOST=root@your-server ./scripts/push_gifs.sh
-
-# or run the curator on the server itself, reachable only over Tailscale, and curate
-# from your phone — tagged cards are in the next game immediately
-docker compose --profile curator up -d --build      # see DEPLOY.md for CURATOR_BIND
+python scripts/rehydrate_gifs.py            # rebuild app/static/gifs/ from decisions.json
+python scripts/rehydrate_gifs.py --check    # what's missing, without downloading
+python scripts/rehydrate_gifs.py --prune    # drop files no decision refers to
 ```
 
-The curator has no login, so if you run it on a server, bind it to your Tailscale address
-(`CURATOR_BIND`) and never to `0.0.0.0`. DEPLOY.md has the full recipe and the checks that
-prove the public internet can't reach it.
+Two kinds of link, one script: `giphy:<id>` is looked up through the API (ids are
+permanent, media URLs aren't), and `url:<digest>` is fetched straight over https. The
+manifest is regenerated from the decisions each time, so the two can't drift.
+
+The one exception is links that expire — a Discord attachment URL is signed and dies after
+about a day. Those cards keep their bytes in `curation/originals/`, which *is* committed.
+It's meant to be a handful of files, never a library.
+
+To get cards onto the server, either curate there directly (below) or rsync:
+
+```bash
+GAH_HOST=root@your-server ./scripts/push_gifs.sh
+```
 
 **The rules** — the knobs are constants at the top of `app/games/gah/engine.py`: hand size,
 prompt choices, player limits, score range, and the away-grace windows.

@@ -9,10 +9,14 @@ and forwards to it. Nothing is exposed to the internet directly.
 git clone https://github.com/4b3c/game-night.git
 cd game-night
 cp .env.example .env
-nano .env                      # set SECRET_KEY (see below); leave the rest for now
+nano .env                      # set SECRET_KEY and GIPHY_API_KEY; leave the rest for now
+python3 scripts/rehydrate_gifs.py   # pull down the cards decisions.json describes
 docker compose up -d --build
 curl localhost:5050/healthz    # {"players":0,"rooms":0,"status":"ok"}
 ```
+
+The rehydrate step matters: the repo describes the deck but doesn't carry the GIF files,
+so without it the lobby will grey out every mode.
 
 Generate a secret key with `openssl rand -hex 32`. Without one the app still runs, but a
 new key is minted on every restart, which logs everyone out.
@@ -136,9 +140,13 @@ All optional — every one has a working default. See `.env.example`.
 
 ## Getting your curated GIFs onto the server
 
-Curate locally (`python scripts/curate_gifs.py` — see the README), then push. One-time
-setup on the server so the container reads GIFs from disk instead of the copy baked into
-the image:
+The GIF files aren't in git — `curation/decisions.json` is, and
+`python scripts/rehydrate_gifs.py` rebuilds the folder from it (see the README). On the
+server that's the easiest way to fill a fresh checkout; after that, curate on the server
+directly and the files never need to move at all.
+
+The image ships the manifest but no GIFs, so the container must read the folder from disk.
+One-time setup:
 
 ```bash
 cat > /opt/game-night/docker-compose.override.yml <<'YAML'
@@ -163,22 +171,21 @@ hold 56 cards at once, and the lobby greys out modes that aren't there yet.
 Prompts travel in git: edit `app/data/prompts.json`, commit, pull, `docker compose up -d
 --build`.
 
-## Curating from your phone (Tailscale only)
+## The curator, published for friends
 
-The curator can run on the server, writing straight into the folder the game reads — tag a
-card on your phone and it's in the next game, no rsync, no restart (the app re-reads the
-manifest when it changes).
-
-It has **no login**, so the only thing protecting it is what address it listens on. Bind it
-to the box's Tailscale address and it's reachable from your own devices and nothing else:
+The curator runs on the server, writing straight into the folder the game reads — tag a
+card and it's in the next game, no rsync, no restart (the app re-reads the manifest when it
+changes). It lives at `https://your.domain/curate`, behind a shared password, so you can
+hand the link to whoever is helping you build the deck.
 
 ```bash
 cd /opt/game-night
-tailscale ip -4                                    # e.g. 100.117.22.95
 
 # in .env (gitignored):
-CURATOR_BIND=100.117.22.95     # your Tailscale address — NEVER 0.0.0.0 here
-GIPHY_API_KEY=...              # curator only; the game doesn't use it
+CURATOR_PASSWORD=four-random-words-is-plenty   # REQUIRED — it won't start without one
+CURATOR_BIND=127.0.0.1                         # nginx reaches it; the internet doesn't
+CURATOR_PREFIX=/curate
+GIPHY_API_KEY=...                              # curator only; the game doesn't use it
 CURATOR_MIN_FRAMES=10
 CURATOR_RATING=r
 
@@ -188,14 +195,40 @@ chown -R 10001:10001 app/static/gifs curation
 docker compose --profile curator up -d --build
 ```
 
-Then open `http://100.117.22.95:5099` on any device on your tailnet. Check the outside can't:
+Then add this to the **same** `server {}` block as the game, above `location /`:
 
-```bash
-curl -m 5 http://YOUR.PUBLIC.IP:5099/     # must fail (000 / connection refused)
-ss -tlnp | grep 5099                      # must show only 100.x.y.z:5099
+```nginx
+    # The GIF curator. Password-gated by the app itself; the trailing-slash-free
+    # proxy_pass plus X-Forwarded-Prefix is what makes its own links come back here
+    # instead of landing on the game.
+    location /curate {
+        proxy_pass http://127.0.0.1:5099;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host               $host;
+        proxy_set_header X-Real-IP          $remote_addr;
+        proxy_set_header X-Forwarded-For    $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto  $scheme;
+        proxy_set_header X-Forwarded-Prefix /curate;
+
+        # Resolving a pasted link means fetching someone else's page first.
+        proxy_read_timeout 120s;
+        client_max_body_size 1m;
+    }
 ```
 
-Stop it when you're done curating — no reason to leave it up:
+`sudo nginx -t && sudo systemctl reload nginx`, then check the gate actually holds:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' https://your.domain/curate/          # 302 -> login
+curl -s -o /dev/null -w '%{http_code}\n' https://your.domain/curate/api/library  # 401
+ss -tlnp | grep 5099        # must show 127.0.0.1:5099 only — never 0.0.0.0
+```
+
+Wrong guesses are throttled to five a minute per address, which is plenty against a script
+and forgiving of someone fat-fingering a passphrase on a phone.
+
+Stop it when nobody's curating — no reason to leave it up:
 
 ```bash
 docker compose --profile curator stop curator

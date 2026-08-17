@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GIF curator</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <style>
+    .gate {
+      display: flex; flex-direction: column; gap: 14px; align-items: stretch;
+      max-width: 380px; margin: 0 auto; padding: 18vh 20px 20px;
+    }
+    .gate h1 { font-family: var(--gn-font-display); font-size: 1.6rem; text-align: center; }
+    .gate p { color: var(--gn-ink-dim); font-size: .88rem; text-align: center; margin-top: -6px; }
+    .gate input {
+      padding: 14px 16px; border: var(--gn-outline) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-pill); background: var(--gn-surface); color: var(--gn-surface-ink);
+      font-family: var(--gn-font-body); font-weight: 800; font-size: 1rem; width: 100%;
+    }
+    .gate .problem {
+      padding: 10px 14px; border: var(--gn-outline) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-sm); background: var(--gn-danger);
+      color: var(--gn-danger-ink); font-weight: 800; text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <form class="gate" method="post" autocomplete="on">
+    <h1>🃏 GIF curator</h1>
+    <p>Ask Abram for the password.</p>
+    {% if error %}<p class="problem">{{ error }}</p>{% endif %}
+    <input type="password" name="password" placeholder="password" autofocus
+           autocomplete="current-password" autocapitalize="off" spellcheck="false">
+    <button class="btn btn--go btn--big" type="submit">Let me in</button>
+  </form>
+</body>
+</html>

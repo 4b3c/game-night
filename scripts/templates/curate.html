@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GIF curator</title>
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/css/theme.css">
-  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
   <style>
-    /* Borrowed from the game's tokens, so a GIF is judged in the colours and at roughly
-       the size it will have on a card. */
+    /* Borrowed from the game's tokens, so a GIF is judged in the colours it will have
+       on a card. */
     body { min-height: 100vh; }
-    .curate { max-width: 1000px; margin: 0 auto; padding: 14px 16px 28px; display: flex; flex-direction: column; gap: 12px; }
+    .curate { max-width: 1100px; margin: 0 auto; padding: 14px 16px 28px; display: flex; flex-direction: column; gap: 12px; }
 
     .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .brand { font-family: var(--gn-font-display); font-size: 1.15rem; white-space: nowrap; }
@@ -19,7 +19,7 @@
       display: block; font-family: var(--gn-font-body); font-size: .68rem;
       text-transform: uppercase; letter-spacing: var(--gn-track-label); color: var(--gn-ink-dim);
     }
-    .tally { display: flex; gap: 7px; flex-wrap: wrap; }
+    .tally { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
     .pill {
       display: inline-flex; flex-direction: column; gap: 3px; overflow: hidden;
       padding: 5px 11px 6px; border: var(--gn-outline-sm) solid var(--gn-outline-color);
@@ -33,7 +33,72 @@
     .meter { display: block; width: 100%; height: 5px; border-radius: 3px; background: rgba(0,0,0,.24); overflow: hidden; }
     .meter i { display: block; height: 100%; background: currentColor; opacity: .8; }
 
-    /* search + discovery */
+    /* --- tabs: the library is the job, discovery is how you feed it ---------- */
+    .tabs { display: flex; gap: 8px; border-bottom: var(--gn-outline-sm) solid var(--gn-outline-color); padding-bottom: 10px; }
+    .tab {
+      padding: 9px 18px; border: var(--gn-outline-sm) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-pill); background: transparent; color: var(--gn-ink);
+      font-family: var(--gn-font-display); font-size: .92rem; cursor: pointer;
+    }
+    .tab[aria-selected="true"] { background: var(--gn-accent-4); color: var(--gn-accent-4-ink); }
+    [hidden] { display: none !important; }
+
+    /* --- shared: a GIF is shown whole, never cropped ------------------------ */
+    /* Fixed width, natural height. Cards used to be forced into a 4:3 box with
+       object-fit:cover, which sliced the top off anything tall and the sides off
+       anything wide — and left the page's midnight blue showing through GIFs with a
+       transparent background. Both problems go away by letting the picture set its
+       own height and sitting it on white, which is what these were authored against. */
+    .shot { display: block; width: 100%; height: auto; background: #fff; }
+
+    /* --- library ------------------------------------------------------------ */
+    .filters { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+    .filter {
+      padding: 6px 13px; border: var(--gn-outline-sm) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-pill); background: var(--gn-bg-3); color: var(--gn-ink);
+      font-size: .8rem; font-weight: 800; cursor: pointer;
+    }
+    .filter[aria-pressed="true"] { background: var(--gn-accent-4); color: var(--gn-accent-4-ink); }
+    .grid { columns: 3 220px; column-gap: 12px; }
+    .item {
+      break-inside: avoid; margin: 0 0 12px; position: relative; overflow: hidden;
+      border: var(--gn-outline) solid var(--gn-outline-color); border-radius: var(--gn-radius-sm);
+      background: var(--gn-bg-2); box-shadow: var(--gn-shadow);
+    }
+    .item--gone { opacity: .45; }
+    .item__name {
+      display: block; padding: 6px 9px; font-size: .74rem; font-weight: 800;
+      color: var(--gn-ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .item__sets { display: flex; gap: 5px; padding: 0 7px 8px; }
+    .chipbtn {
+      flex: 1 1 0; padding: 6px 0; border: var(--gn-outline-sm) solid var(--gn-ink-dim);
+      border-radius: var(--gn-radius-pill); background: transparent; color: var(--gn-ink-dim);
+      font-size: .72rem; font-weight: 800; cursor: pointer; text-align: center;
+    }
+    .chipbtn[aria-pressed="true"] { border-color: var(--gn-outline-color); }
+    .chipbtn--normal[aria-pressed="true"] { background: var(--gn-accent-3); color: var(--gn-accent-3-ink); }
+    .chipbtn--adult[aria-pressed="true"] { background: var(--gn-accent-2); color: var(--gn-accent-2-ink); }
+    .chipbtn--millennial[aria-pressed="true"] { background: var(--gn-accent-1); color: var(--gn-accent-1-ink); }
+    .item__drop {
+      position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; display: grid;
+      place-items: center; border: var(--gn-outline-sm) solid var(--gn-outline-color);
+      border-radius: 50%; background: var(--gn-danger); color: var(--gn-danger-ink);
+      font-size: .9rem; font-weight: 800; cursor: pointer; opacity: 0; transition: opacity 140ms ease;
+    }
+    .item:hover .item__drop, .item:focus-within .item__drop { opacity: 1; }
+    .empty { padding: 40px 10px; text-align: center; color: var(--gn-ink-dim); }
+
+    /* --- add by link -------------------------------------------------------- */
+    .adder { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+    .adder textarea {
+      flex: 1 1 320px; min-width: 0; min-height: 44px; padding: 11px 14px; resize: vertical;
+      border: var(--gn-outline) solid var(--gn-outline-color); border-radius: var(--gn-radius-sm);
+      background: var(--gn-surface); color: var(--gn-surface-ink);
+      font-family: var(--gn-font-body); font-weight: 700; font-size: .9rem;
+    }
+
+    /* --- discover ----------------------------------------------------------- */
     .find { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .find input {
       flex: 1 1 220px; min-width: 0; padding: 10px 14px;
@@ -50,25 +115,22 @@
     .tag:hover { background: var(--gn-accent-4); color: var(--gn-accent-4-ink); }
     .tag--live { background: var(--gn-accent-4); color: var(--gn-accent-4-ink); }
 
-    /* the GIF */
     .stage {
-      position: relative; display: grid; place-items: center; min-height: 42vh; padding: 12px;
+      display: grid; place-items: center; padding: 12px;
       border: var(--gn-outline-lg) solid var(--gn-outline-color); border-radius: var(--gn-radius);
-      background: var(--gn-bg-well); box-shadow: var(--gn-shadow-lg); overflow: hidden;
+      background: var(--gn-bg-well); box-shadow: var(--gn-shadow-lg);
     }
-    .card {
-      width: min(100%, 560px); aspect-ratio: 4 / 3; overflow: hidden;
+    /* Capped by height rather than forced into a box: the whole GIF is always visible,
+       and the tag buttons stay above the fold on a phone. */
+    .stage .shot {
+      width: auto; max-width: 100%; max-height: 46vh;
       border: var(--gn-outline) solid var(--gn-outline-color); border-radius: var(--gn-radius-sm);
-      background: #000; box-shadow: var(--gn-shadow);
     }
-    .card img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .stage--drop { outline: 4px dashed var(--gn-accent-3); outline-offset: -10px; }
     .meta { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; color: var(--gn-ink-dim); font-size: .85rem; min-height: 1.3em; margin-top: 8px; }
     .meta b { color: var(--gn-ink); }
     .meta .chip { padding: 2px 9px; border-radius: var(--gn-radius-pill); background: rgba(0,0,0,.3); font-size: .75rem; }
     .pos { font-variant-numeric: tabular-nums; }
 
-    /* controls: one row on a desktop, two thumb-sized rows on a phone */
     .sets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .nav { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; margin-top: 10px; }
     @media (min-width: 760px) {
@@ -79,7 +141,6 @@
     }
     .btn kbd { font-family: var(--gn-font-body); font-size: .66rem; font-weight: 800; opacity: .72; letter-spacing: .06em; }
     .verdict { flex-direction: column; gap: 2px; padding: 14px 8px; }
-    /* Off = outline only, on = filled. A GIF can be in several sets at once. */
     .verdict[aria-pressed="false"] { background: transparent; color: var(--gn-ink); border-color: var(--gn-ink-dim); box-shadow: none; }
     .verdict[aria-pressed="true"]::before { content: '✓ '; }
     .v-normal[aria-pressed="true"] { background: var(--gn-accent-3); color: var(--gn-accent-3-ink); }
@@ -112,15 +173,17 @@
       .brand { font-size: 1rem; }
       .tally { gap: 5px; }
       .pill { font-size: .7rem; padding: 4px 9px 5px; }
-      /* one swipeable row of starter terms instead of four stacked rows */
       .tags { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
       .tags::-webkit-scrollbar { display: none; }
       .tag { flex: 0 0 auto; }
-      .stage { min-height: 26vh; padding: 6px; }
-      .card { width: 100%; }
+      .stage { padding: 6px; }
+      .stage .shot { max-height: 38vh; }
       .meta { font-size: .78rem; gap: 6px; margin-top: 6px; }
       .verdict { padding: 11px 4px; font-size: .9rem; }
       .navbtn { padding: 13px 12px; }
+      .grid { columns: 2 130px; column-gap: 8px; }
+      .item { margin-bottom: 8px; }
+      .item__drop { opacity: 1; }
     }
   </style>
 </head>
@@ -133,47 +196,64 @@
       <div class="tally" id="tally"></div>
     </div>
 
+    <div class="tabs" role="tablist">
+      <button class="tab" id="tab-library" role="tab" aria-selected="true" data-tab="library" type="button">Library</button>
+      <button class="tab" id="tab-discover" role="tab" aria-selected="false" data-tab="discover" type="button">Discover</button>
+      <form method="post" action="{{ url_for('logout') }}" style="margin-left:auto">
+        <button class="btn btn--tiny btn--ghost" type="submit">Sign out</button>
+      </form>
+    </div>
+
     <p class="problem" id="problem"></p>
 
-    <div class="find">
-      <input id="search" type="search" placeholder="Search anything — nuke, deep fried, cursed…" autocomplete="off" spellcheck="false">
-      <button class="btn btn--tiny" data-action="search" type="button">Go</button>
-      <button class="btn btn--tiny btn--ghost" data-action="shuffle" type="button">Whole pack</button>
-      <button class="btn btn--tiny btn--ghost" data-action="related" type="button">Related to this <kbd>R</kbd></button>
-    </div>
-    <div class="tags" id="tags"></div>
+    <!-- ============================ LIBRARY ============================ -->
+    <section id="panel-library" role="tabpanel" aria-labelledby="tab-library">
+      <div class="adder">
+        <textarea id="links" placeholder="Paste GIF links — Tenor, Discord, anywhere. One per line, or comma separated."></textarea>
+        <button class="btn" data-action="add-links" type="button">Add</button>
+      </div>
 
-    <section>
+      <div class="filters" id="filters"></div>
+      <div class="grid" id="grid"></div>
+      <p class="empty" id="empty" hidden>Nothing in this set yet — find some in <b>Discover</b>.</p>
+    </section>
+
+    <!-- =========================== DISCOVER ============================ -->
+    <section id="panel-discover" role="tabpanel" aria-labelledby="tab-discover" hidden>
+      <div class="find">
+        <input id="search" type="search" placeholder="Search anything — nuke, deep fried, cursed…" autocomplete="off" spellcheck="false">
+        <button class="btn btn--tiny" data-action="search" type="button">Go</button>
+        <button class="btn btn--tiny btn--ghost" data-action="shuffle" type="button">Whole pack</button>
+        <button class="btn btn--tiny btn--ghost" data-action="related" type="button">Related to this <kbd>R</kbd></button>
+      </div>
+      <div class="tags" id="tags"></div>
+
       <div class="stage" id="stage">
-        <div class="card"><img id="gif" alt="candidate GIF"></div>
+        <img class="shot" id="gif" alt="candidate GIF">
       </div>
       <p class="meta" id="meta"></p>
-    </section>
 
-    <section class="controls">
-      <div class="sets">
-        {% for name, meta in sets.items() %}
-        <button class="btn verdict v-{{ name }}" data-set="{{ name }}" aria-pressed="false" type="button">
-          {{ meta.label }} <kbd>{{ meta.key }}</kbd>
-        </button>
-        {% endfor %}
+      <div class="controls">
+        <div class="sets">
+          {% for name, meta in sets.items() %}
+          <button class="btn verdict v-{{ name }}" data-set="{{ name }}" aria-pressed="false" type="button">
+            {{ meta.label }} <kbd>{{ meta.key }}</kbd>
+          </button>
+          {% endfor %}
+        </div>
+        <div class="nav">
+          <button class="btn navbtn btn--ghost" data-action="prev" type="button">← <kbd>Back</kbd></button>
+          <button class="btn navbtn btn--go" data-action="next" type="button">Next → <kbd>→</kbd></button>
+        </div>
       </div>
-      <div class="nav">
-        <button class="btn navbtn btn--ghost" data-action="prev" type="button">← <kbd>Back</kbd></button>
-        <button class="btn navbtn btn--go" data-action="next" type="button">Next → <kbd>→</kbd></button>
+
+      <div class="foot">
+        <button class="btn btn--tiny btn--ghost" data-action="clear" type="button">Remove from all sets <kbd>X</kbd></button>
+        <span class="hint">tagged GIFs go straight into the game</span>
       </div>
+
+      <div id="preload" class="preload"></div>
     </section>
-
-    <div class="foot">
-      <button class="btn btn--tiny btn--ghost" data-action="clear" type="button">Remove from all sets <kbd>X</kbd></button>
-      <label class="btn btn--tiny" for="pick">＋ Add your own GIFs
-        <input id="pick" type="file" accept="image/gif,.gif" multiple hidden>
-      </label>
-      <span class="hint">or drag them onto the page · tagged GIFs go straight into the game</span>
-      <button class="btn btn--tiny btn--danger" data-action="drop-filler" type="button">Delete the 80 placeholders</button>
-    </div>
-
-    <div id="preload" class="preload"></div>
   </main>
 
   <div class="flash" id="flash"></div>
@@ -183,22 +263,30 @@
   'use strict';
   const SETS = {{ sets | tojson }};
   const STARTERS = {{ queries | tojson }};   // a few search terms to get going
+  const GIF_BASE = {{ url_for('static', filename='gifs/') | tojson }};
   const el = (id) => document.getElementById(id);
   const gif = el('gif'), meta = el('meta'), tally = el('tally'), problem = el('problem');
   const flashEl = el('flash'), preload = el('preload'), tags = el('tags'), search = el('search');
+  const grid = el('grid'), filters = el('filters'), emptyEl = el('empty');
 
-  let history = [];      // everything shown this session, in order
+  let history = [];      // discovery: everything shown this session, in order
   let index = -1;        // where we are in it
   let liveQuery = null;  // pinned search term, if any
   let relatedTags = [];
   let busy = false;
+  let cards = [];        // the library
+  let filter = 'all';
+  let tab = 'library';
+
+  const esc = (s) => String(s == null ? '' : s).replace(/[<>&"]/g, (c) =>
+    ({'<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;'}[c]));
 
   function flash(text, bad) {
     flashEl.textContent = text;
     flashEl.classList.toggle('flash--bad', !!bad);
     flashEl.classList.add('flash--on');
     clearTimeout(flash.timer);
-    flash.timer = setTimeout(() => flashEl.classList.remove('flash--on'), 1000);
+    flash.timer = setTimeout(() => flashEl.classList.remove('flash--on'), 1400);
   }
 
   function renderCounts(counts) {
@@ -212,6 +300,101 @@
     }).join('') + '<span class="pill">seen <b>' + counts.seen + '</b></span>';
   }
 
+  // --- tabs ---------------------------------------------------------------
+  function showTab(which) {
+    tab = which;
+    document.querySelectorAll('[data-tab]').forEach((b) =>
+      b.setAttribute('aria-selected', b.dataset.tab === which ? 'true' : 'false'));
+    el('panel-library').hidden = which !== 'library';
+    el('panel-discover').hidden = which !== 'discover';
+    if (which === 'discover' && index < 0) startDiscovery();
+  }
+
+  // --- the library --------------------------------------------------------
+  function drawFilters() {
+    const counts = {all: cards.length};
+    Object.keys(SETS).forEach((n) => { counts[n] = cards.filter((c) => c.sets.indexOf(n) !== -1).length; });
+    const one = (key, label) =>
+      '<button class="filter" data-filter="' + key + '" aria-pressed="' + (filter === key) +
+      '" type="button">' + label + ' <b>' + counts[key] + '</b></button>';
+    filters.innerHTML = one('all', 'Everything') +
+      Object.keys(SETS).map((n) => one(n, SETS[n].label)).join('');
+  }
+
+  function drawGrid() {
+    const shown = filter === 'all' ? cards : cards.filter((c) => c.sets.indexOf(filter) !== -1);
+    emptyEl.hidden = shown.length > 0;
+    grid.innerHTML = shown.map((c) =>
+      '<figure class="item' + (c.on_disk ? '' : ' item--gone') + '" data-card="' + esc(c.source_id) + '">' +
+        '<img class="shot" src="' + GIF_BASE + encodeURIComponent(c.file) + '" alt="' + esc(c.title) + '" loading="lazy">' +
+        '<button class="item__drop" data-drop="' + esc(c.source_id) + '" title="Remove from the game" type="button">✕</button>' +
+        '<figcaption class="item__name" title="' + esc(c.title) + '">' + esc(c.title) + '</figcaption>' +
+        '<div class="item__sets">' +
+          Object.keys(SETS).map((n) =>
+            '<button class="chipbtn chipbtn--' + n + '" data-card-set="' + esc(c.source_id) + '" data-set-name="' + n +
+            '" aria-pressed="' + (c.sets.indexOf(n) !== -1) + '" type="button">' + SETS[n].key + '</button>').join('') +
+        '</div>' +
+      '</figure>').join('');
+  }
+
+  async function loadLibrary() {
+    const data = await (await fetch('api/library')).json();
+    cards = data.cards || [];
+    renderCounts(data.counts);
+    drawFilters();
+    drawGrid();
+  }
+
+  async function retag(sourceId, sets) {
+    if (busy) return;
+    busy = true;
+    const card = cards.find((c) => c.source_id === sourceId);
+    const before = card ? card.sets.slice() : [];
+    if (card) card.sets = sets;      // optimistic — the grid responds instantly
+    drawGrid();
+    try {
+      const response = await fetch('api/retag', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({source_id: sourceId, sets: sets}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'save failed');
+      if (!sets.length) cards = cards.filter((c) => c.source_id !== sourceId);
+      else if (card) { card.sets = data.sets; card.on_disk = true; }
+      renderCounts(data.counts);
+      flash(sets.length ? 'In: ' + sets.map((s) => SETS[s].label).join(' + ') : 'Removed from the game');
+    } catch (err) {
+      if (card) card.sets = before;  // put it back if the server refused
+      flash(String(err.message || err), true);
+    } finally {
+      busy = false;
+      drawFilters();
+      drawGrid();
+    }
+  }
+
+  async function addLinks() {
+    const raw = el('links').value.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
+    if (!raw.length) { flash('Paste a link first', true); return; }
+    flash('Fetching ' + raw.length + ' link(s)…');
+    const data = await (await fetch('api/add-link', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({links: raw}),
+    })).json();
+    (data.failed || []).forEach((f) => { problem.textContent = f.link + ' — ' + f.why; });
+    if (data.candidates && data.candidates.length) {
+      // Straight into Discover, positioned next, so they can be tagged immediately.
+      history.splice(index + 1, 0, ...data.candidates);
+      el('links').value = '';
+      showTab('discover');
+      if (index < 0) { index = 0; paint(); } else { go(1); }
+      flash('Yours — now tag it with N / E / M');
+    } else {
+      flash('Nothing could be read from those', true);
+    }
+  }
+
+  // --- discovery ----------------------------------------------------------
   function current() { return history[index] || null; }
 
   function paint() {
@@ -227,17 +410,16 @@
     }
     if (gif.getAttribute('src') !== c.preview) gif.src = c.preview;
     meta.innerHTML =
-      '<b>' + (c.title || '(untitled)').replace(/[<>&]/g, '') + '</b>' +
-      '<span class="chip">' + (c.local ? 'your file' : 'found under “' + String(c.query).replace(/[<>&]/g, '') + '”') + '</span>' +
+      '<b>' + esc(c.title || '(untitled)') + '</b>' +
+      '<span class="chip">' + (c.local ? 'your link' : 'found under “' + esc(c.query) + '”') + '</span>' +
       (c.frames ? '<span class="chip">' + c.frames + ' frames</span>' : '') +
       '<span class="chip pos">' + (index + 1) + ' / ' + history.length + '</span>';
-    // keep the next few warm so scrolling is instant
     preload.innerHTML = history.slice(index + 1, index + 4)
       .map((n) => '<img src="' + n.preview + '" alt="">').join('');
   }
 
   async function fill(n) {
-    const response = await fetch('/api/next?n=' + (n || 6));
+    const response = await fetch('api/next?n=' + (n || 6));
     const data = await response.json();
     renderCounts(data.counts);
     problem.textContent = data.error || '';
@@ -259,8 +441,8 @@
     // Scrolling past something counts as having seen it, so it won't come round again
     // tomorrow. Tagged ones are remembered anyway.
     if (step > 0 && leaving && !(leaving.sets || []).length) {
-      fetch('/api/seen', {method: 'POST', headers: {'Content-Type': 'application/json'},
-                          body: JSON.stringify({candidate: leaving})}).catch(() => {});
+      fetch('api/seen', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                         body: JSON.stringify({candidate: leaving})}).catch(() => {});
     }
   }
 
@@ -275,7 +457,7 @@
     c.sets = sets;              // optimistic, so the buttons respond instantly
     paint();
     try {
-      const response = await fetch('/api/sets', {
+      const response = await fetch('api/sets', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({candidate: c, sets: sets}),
       });
@@ -284,6 +466,7 @@
       c.sets = data.sets;
       renderCounts(data.counts);
       flash(sets.length ? 'In: ' + sets.map((s) => SETS[s].label).join(' + ') : 'Removed');
+      loadLibrary();            // the Library tab should already agree when you switch
     } catch (err) {
       c.sets = before;           // put it back if the server refused
       flash(String(err.message || err), true);
@@ -300,7 +483,7 @@
   }
 
   async function pin(query) {
-    await fetch('/api/query', {method: 'POST', headers: {'Content-Type': 'application/json'},
+    await fetch('api/query', {method: 'POST', headers: {'Content-Type': 'application/json'},
                               body: JSON.stringify({query: query})});
     liveQuery = query || null;
     search.value = query || '';
@@ -312,9 +495,9 @@
 
   function drawTags() {
     const chips = (relatedTags.length ? relatedTags : STARTERS).map((t) =>
-      '<button class="tag' + (t === liveQuery ? ' tag--live' : '') + '" data-tag="' + t.replace(/"/g, '') + '" type="button">' + t + '</button>');
+      '<button class="tag' + (t === liveQuery ? ' tag--live' : '') + '" data-tag="' + esc(t) + '" type="button">' + esc(t) + '</button>');
     tags.innerHTML = (liveQuery
-      ? '<button class="tag tag--live" data-tag="" type="button">✕ ' + liveQuery + '</button>'
+      ? '<button class="tag tag--live" data-tag="" type="button">✕ ' + esc(liveQuery) + '</button>'
       : '') + chips.join('');
   }
 
@@ -322,7 +505,7 @@
     const c = current();
     if (!c) { flash('Nothing to go on', true); return; }
     const term = (c.query && c.query !== 'trending' && !c.local) ? c.query : '';
-    const url = '/api/related?term=' + encodeURIComponent(term) + '&title=' + encodeURIComponent(c.title || '');
+    const url = 'api/related?term=' + encodeURIComponent(term) + '&title=' + encodeURIComponent(c.title || '');
     const data = await (await fetch(url)).json();
     relatedTags = (data.tags && data.tags.length) ? data.tags : (data.fallback || []);
     drawTags();
@@ -331,18 +514,26 @@
       : 'Nothing to suggest for that one', !relatedTags.length);
   }
 
-  async function post(path, okText) {
-    const response = await fetch(path, {method: 'POST'});
-    const data = await response.json();
-    if (!response.ok) { flash(data.error || 'failed', true); return; }
-    renderCounts(data.counts);
-    flash(okText.replace('%n', data.removed));
+  async function startDiscovery() {
+    try { await fill(6); index = 0; paint(); }
+    catch (e) { problem.textContent = String(e); }
   }
 
   // --- input -------------------------------------------------------------
   document.addEventListener('click', (event) => {
-    const hit = event.target.closest('[data-set], [data-action], [data-tag]');
+    const hit = event.target.closest('[data-set], [data-action], [data-tag], [data-tab], [data-filter], [data-card-set], [data-drop]');
     if (!hit) return;
+    if (hit.dataset.tab) return void showTab(hit.dataset.tab);
+    if (hit.dataset.filter) { filter = hit.dataset.filter; drawFilters(); drawGrid(); return; }
+    if (hit.dataset.drop) return void retag(hit.dataset.drop, []);
+    if (hit.dataset.cardSet !== undefined && hit.dataset.setName) {
+      const card = cards.find((c) => c.source_id === hit.dataset.cardSet);
+      if (!card) return;
+      const sets = card.sets.slice();
+      const at = sets.indexOf(hit.dataset.setName);
+      if (at === -1) sets.push(hit.dataset.setName); else sets.splice(at, 1);
+      return void retag(card.source_id, sets);
+    }
     if (hit.dataset.set) return void toggle(hit.dataset.set);
     if (hit.dataset.tag !== undefined) return void pin(hit.dataset.tag);
     switch (hit.dataset.action) {
@@ -352,7 +543,7 @@
       case 'search': pin(search.value.trim()); break;
       case 'shuffle': pin(''); break;
       case 'related': showRelated(); break;
-      case 'drop-filler': post('/api/drop-filler', 'Deleted %n placeholders'); break;
+      case 'add-links': addLinks(); break;
     }
   });
 
@@ -362,7 +553,9 @@
   });
 
   document.addEventListener('keydown', (event) => {
-    if (event.target === search) return;
+    // Shortcuts belong to the scroller; typing a link or a search must not tag anything.
+    if (tab !== 'discover') return;
+    if (event.target === search || event.target.tagName === 'TEXTAREA') return;
     const key = event.key.toLowerCase();
     if (key === 'arrowright') { event.preventDefault(); go(1); }
     else if (key === 'arrowleft') { event.preventDefault(); go(-1); }
@@ -374,44 +567,9 @@
     else if (key === '/') { event.preventDefault(); search.focus(); search.select(); }
   });
 
-  // --- drag in your own --------------------------------------------------
-  const stage = el('stage');
-  ['dragenter', 'dragover'].forEach((type) => document.addEventListener(type, (event) => {
-    event.preventDefault();
-    stage.classList.add('stage--drop');
-  }));
-  document.addEventListener('dragleave', (event) => {
-    if (!event.relatedTarget) stage.classList.remove('stage--drop');
-  });
-  async function upload(files) {
-    if (!files.length) return;
-    const form = new FormData();
-    files.forEach((file) => form.append('files', file));
-    flash('Reading ' + files.length + ' file(s)…');
-    const data = await (await fetch('/api/import', {method: 'POST', body: form})).json();
-    renderCounts(data.counts);
-    if (data.skipped && data.skipped.length) flash('Skipped (not .gif): ' + data.skipped.join(', '), true);
-    if (data.candidates && data.candidates.length) {
-      // Slot them in right after where we are, so they can be tagged straight away.
-      history.splice(index + 1, 0, ...data.candidates);
-      go(1);
-      flash('Yours — now tag it with N / E / M');
-    }
-  }
-
-  document.addEventListener('drop', (event) => {
-    event.preventDefault();
-    stage.classList.remove('stage--drop');
-    upload(Array.from((event.dataTransfer && event.dataTransfer.files) || []));
-  });
-  el('pick').addEventListener('change', (event) => {
-    upload(Array.from(event.target.files || []));
-    event.target.value = '';   // so picking the same file twice still fires
-  });
-
   renderCounts({{ counts | tojson }});
-  drawTags();   // starter terms are visible immediately, so there's always somewhere to go
-  (async () => { await fill(6); index = 0; paint(); })();
+  drawTags();
+  loadLibrary();
 })();
 </script>
 </body>
