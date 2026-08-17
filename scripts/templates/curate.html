@@ -104,6 +104,24 @@
     }
     .problem:empty { display: none; }
     .preload { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+    /* On a phone the tap targets have to be above the fold, so the trimmings get
+       compressed rather than pushing the buttons off screen. */
+    @media (max-width: 760px) {
+      .curate { padding: 10px 12px 20px; gap: 9px; }
+      .brand { font-size: 1rem; }
+      .tally { gap: 5px; }
+      .pill { font-size: .7rem; padding: 4px 9px 5px; }
+      /* one swipeable row of starter terms instead of four stacked rows */
+      .tags { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+      .tags::-webkit-scrollbar { display: none; }
+      .tag { flex: 0 0 auto; }
+      .stage { min-height: 30vh; padding: 8px; }
+      .card { width: 100%; }
+      .meta { font-size: .78rem; gap: 6px; margin-top: 6px; }
+      .verdict { padding: 12px 4px; font-size: .95rem; }
+      .navbtn { padding: 13px 12px; }
+    }
   </style>
 </head>
 <body>
