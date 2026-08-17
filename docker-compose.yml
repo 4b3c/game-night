@@ -80,6 +80,8 @@ services:
       CURATOR_PASSWORD: ${CURATOR_PASSWORD:-}
       # Signs the curator's own session cookie; falls back to SECRET_KEY.
       CURATOR_SECRET_KEY: ${CURATOR_SECRET_KEY:-}
+      # Turn on once it's reachable over https, same as GN_COOKIE_SECURE for the game.
+      CURATOR_COOKIE_SECURE: ${CURATOR_COOKIE_SECURE:-0}
     ports:
       - "${CURATOR_BIND:-127.0.0.1}:5099:5099"
     volumes:

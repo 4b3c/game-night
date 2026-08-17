@@ -739,7 +739,13 @@ def build_app(queue: Queue, library: Library, source, min_frames: int, password:
     # Signs the "you're in" cookie. Reusing the game's key is fine — different cookie
     # name, same box — but a curator-specific one keeps the two independent.
     app.secret_key = os.environ.get("CURATOR_SECRET_KEY") or os.environ.get("SECRET_KEY") or os.urandom(32)
-    app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
+    app.config.update(
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        # Same trap as the game's GN_COOKIE_SECURE: turn this on only once HTTPS works,
+        # or the browser drops the cookie and the password page just reappears forever.
+        SESSION_COOKIE_SECURE=os.environ.get("CURATOR_COOKIE_SECURE", "0") == "1",
+    )
 
     # Whoever has the password can retag anything, which is the point — this gate exists
     # to keep the internet at large out, not to tell friends apart.
