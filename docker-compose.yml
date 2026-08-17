@@ -79,6 +79,14 @@ services:
       # the next game — the app re-reads the manifest when it changes.
       - ./app/static/gifs:/app/app/static/gifs:rw
       - ./curation:/app/curation:rw
+    # The image's healthcheck asks the *game* about /healthz on 5050; this container runs
+    # the curator on 5099 instead, so it needs its own.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:5099/', timeout=4).status == 200 else 1)"]
+      interval: 30s
+      timeout: 6s
+      start_period: 10s
+      retries: 3
     logging:
       driver: json-file
       options:
