@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GIF curator</title>
+  <title>Deck curator</title>
   <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
@@ -28,7 +28,7 @@
 </head>
 <body>
   <form class="gate" method="post" autocomplete="on">
-    <h1>🃏 GIF curator</h1>
+    <h1>🃏 Deck curator</h1>
     <p>Ask Abram for the password.</p>
     {% if error %}<p class="problem">{{ error }}</p>{% endif %}
     <input type="password" name="password" placeholder="password" autofocus

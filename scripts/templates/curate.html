@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GIF curator</title>
+  <title>Deck curator</title>
   <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
@@ -98,6 +98,43 @@
       font-family: var(--gn-font-body); font-weight: 700; font-size: .9rem;
     }
 
+    /* --- prompts ------------------------------------------------------------ */
+    /* A list, not a grid: these are sentences, and they are read left to right. The
+       set chips are the same control the cards use, so tagging feels identical. */
+    .writer { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+    .writer textarea {
+      flex: 1 1 320px; min-width: 0; min-height: 44px; padding: 11px 14px; resize: vertical;
+      border: var(--gn-outline) solid var(--gn-outline-color); border-radius: var(--gn-radius-sm);
+      background: var(--gn-surface); color: var(--gn-surface-ink);
+      font-family: var(--gn-font-body); font-weight: 700; font-size: .9rem;
+    }
+    .lines { display: flex; flex-direction: column; gap: 8px; }
+    .line {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px 9px;
+      border: var(--gn-outline) solid var(--gn-outline-color); border-radius: var(--gn-radius-sm);
+      background: var(--gn-bg-2);
+    }
+    .line__text {
+      flex: 1 1 260px; min-width: 0; padding: 8px 11px;
+      border: var(--gn-outline-sm) solid transparent; border-radius: var(--gn-radius-sm);
+      background: transparent; color: var(--gn-ink);
+      font-family: var(--gn-font-body); font-weight: 700; font-size: .9rem;
+    }
+    .line__text:hover { border-color: var(--gn-outline-color); }
+    .line__text:focus { outline: none; border-color: var(--gn-accent-4); background: var(--gn-surface); color: var(--gn-surface-ink); }
+    .line__sets { display: flex; gap: 5px; }
+    .line__sets .chipbtn { flex: 0 0 auto; padding: 6px 11px; }
+    .line__drop {
+      width: 30px; height: 30px; flex: 0 0 auto; display: grid; place-items: center;
+      border: var(--gn-outline-sm) solid var(--gn-outline-color); border-radius: 50%;
+      background: var(--gn-bg-3); color: var(--gn-ink-dim);
+      font-size: .85rem; font-weight: 800; cursor: pointer;
+    }
+    /* Second click deletes. A prompt has no "rejected" list to be undone from, and this
+       tab gets used on a phone, where one stray tap should not lose a line you wrote. */
+    .line__drop[data-sure="1"] { width: auto; padding: 0 11px; border-radius: var(--gn-radius-pill); background: var(--gn-danger); color: var(--gn-danger-ink); }
+    .blank { color: var(--gn-ink-dim); }
+
     /* --- discover ----------------------------------------------------------- */
     .find { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .find input {
@@ -142,7 +179,7 @@
 <body>
   <main class="curate" id="curate">
     <div class="bar">
-      <h1 class="brand">🃏 GIF curator
+      <h1 class="brand">🃏 Deck curator
         <small>{{ source }} · rating {{ rating }}</small>
       </h1>
       <div class="tally" id="tally"></div>
@@ -151,6 +188,7 @@
     <div class="tabs" role="tablist">
       <button class="tab" id="tab-library" role="tab" aria-selected="true" data-tab="library" type="button">Library</button>
       <button class="tab" id="tab-discover" role="tab" aria-selected="false" data-tab="discover" type="button">Discover</button>
+      <button class="tab" id="tab-prompts" role="tab" aria-selected="false" data-tab="prompts" type="button">Prompts</button>
       <form method="post" action="{{ url_for('logout') }}" style="margin-left:auto">
         <button class="btn btn--tiny btn--ghost" type="submit">Sign out</button>
       </form>
@@ -182,6 +220,20 @@
       <p class="empty" id="noresults" hidden>Search for something to start tagging.</p>
       <div class="morewrap"><button class="btn btn--ghost" id="more" data-action="more" type="button" hidden>Show 50 more</button></div>
     </section>
+
+    <!-- =========================== PROMPTS ============================= -->
+    <section id="panel-prompts" role="tabpanel" aria-labelledby="tab-prompts" hidden>
+      <div class="writer">
+        <textarea id="newprompt" placeholder="Write a prompt — use ___ where the GIF goes. One per line to add several."></textarea>
+        <div class="line__sets" id="newsets"></div>
+        <button class="btn" data-action="add-prompt" type="button">Add</button>
+      </div>
+      <p class="hint">New prompts go into the sets lit up above. Edit any line and it saves when you click away.</p>
+
+      <div class="filters" id="pfilters"></div>
+      <div class="lines" id="lines"></div>
+      <p class="empty" id="pempty" hidden>No prompts in this set — write one above.</p>
+    </section>
   </main>
 
   <div class="flash" id="flash"></div>
@@ -201,6 +253,7 @@
   const tally = el('tally'), problem = el('problem'), flashEl = el('flash'), search = el('search');
   const grid = el('grid'), filters = el('filters'), emptyEl = el('empty');
   const resultsEl = el('results'), foundEl = el('found'), moreEl = el('more'), noResultsEl = el('noresults');
+  const linesEl = el('lines'), pFiltersEl = el('pfilters'), pEmptyEl = el('pempty'), newSetsEl = el('newsets');
 
   let busy = false;
   let cards = [];        // the library
@@ -209,6 +262,10 @@
   let results = [];      // the current page of search results
   let term = '';         // what was searched for
   let offset = 0;
+  let prompts = [];      // every prompt, whatever set it's in
+  let pFilter = 'all';
+  let newSets = [SET_ORDER[0]];  // which sets a freshly written prompt lands in
+  let promptsLoaded = false;
 
   const esc = (s) => String(s == null ? '' : s).replace(/[<>&"]/g, (c) =>
     ({'<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;'}[c]));
@@ -238,7 +295,9 @@
       b.setAttribute('aria-selected', b.dataset.tab === which ? 'true' : 'false'));
     el('panel-library').hidden = which !== 'library';
     el('panel-discover').hidden = which !== 'discover';
+    el('panel-prompts').hidden = which !== 'prompts';
     if (which === 'discover') search.focus();
+    if (which === 'prompts' && !promptsLoaded) loadPrompts();
   }
 
   // --- one card, used by both grids ---------------------------------------
@@ -403,6 +462,147 @@
     }
   }
 
+  // --- prompts: the other half of the deck ---------------------------------
+  /** The three set toggles, shared by a prompt line and the "new prompt" row. */
+  function setChips(sets, attr, id) {
+    return SET_ORDER.map((n) =>
+      '<button class="chipbtn chipbtn--' + n + '" ' + attr + '="' + esc(id) +
+      '" data-set-name="' + n + '" aria-pressed="' + (sets.indexOf(n) !== -1) +
+      '" type="button">' + SETS[n].label + '</button>').join('');
+  }
+
+  function drawNewSets() {
+    newSetsEl.innerHTML = setChips(newSets, 'data-newset', 'new');
+  }
+
+  function drawPromptFilters() {
+    const counts = {all: prompts.length};
+    SET_ORDER.forEach((n) => { counts[n] = prompts.filter((p) => p.sets.indexOf(n) !== -1).length; });
+    const one = (key, label) =>
+      '<button class="filter" data-pfilter="' + key + '" aria-pressed="' + (pFilter === key) +
+      '" type="button">' + label + ' <b>' + counts[key] + '</b></button>';
+    pFiltersEl.innerHTML = one('all', 'Everything') + SET_ORDER.map((n) => one(n, SETS[n].label)).join('');
+  }
+
+  function drawPrompts() {
+    const shown = pFilter === 'all' ? prompts : prompts.filter((p) => p.sets.indexOf(pFilter) !== -1);
+    pEmptyEl.hidden = shown.length > 0;
+    linesEl.innerHTML = shown.map((p) =>
+      '<div class="line" data-prompt="' + esc(p.id) + '">' +
+        '<input class="line__text" data-prompt-text="' + esc(p.id) + '" value="' + esc(p.text) +
+          '" aria-label="prompt text">' +
+        '<div class="line__sets">' + setChips(p.sets, 'data-prompt-set', p.id) + '</div>' +
+        '<button class="line__drop" data-prompt-drop="' + esc(p.id) +
+          '" title="Delete this prompt" type="button">✕</button>' +
+      '</div>').join('');
+  }
+
+  async function loadPrompts() {
+    const data = await (await fetch(apiUrl('api/prompts'))).json();
+    prompts = (data.prompts || []).map((p) => { p.sets = p.sets || []; return p; });
+    promptsLoaded = true;
+    drawPromptFilters();
+    drawPrompts();
+  }
+
+  /**
+   * Write one prompt. `id` null means a new one.
+   *
+   * Deliberately one endpoint for both the text and the set chips: editing a line and
+   * tagging it are the same write, so they can't disagree about what was saved.
+   */
+  async function savePrompt(id, text, sets) {
+    if (busy) return null;
+    busy = true;
+    try {
+      const response = await fetch(apiUrl('api/prompt-save'), {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id: id, text: text, sets: sets}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'save failed');
+      const saved = data.prompt;
+      const at = prompts.findIndex((p) => p.id === saved.id);
+      if (at === -1) prompts.push(saved); else prompts[at] = saved;
+      return saved;
+    } catch (err) {
+      flash(String(err.message || err), true);
+      return null;
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function retagPrompt(id, sets) {
+    const row = prompts.find((p) => p.id === id);
+    if (!row) return;
+    const before = row.sets.slice();
+    row.sets = sets;                 // optimistic — the chips respond instantly
+    drawPrompts();
+    const saved = await savePrompt(id, row.text, sets);
+    if (!saved) row.sets = before;   // put it back if the server refused
+    else flash(sets.length ? 'In: ' + sets.map((s) => SETS[s].label).join(' + ') : 'In no mode — retired');
+    drawPromptFilters();
+    drawPrompts();
+  }
+
+  async function editPrompt(id, text) {
+    const row = prompts.find((p) => p.id === id);
+    if (!row || text === row.text) return;
+    const saved = await savePrompt(id, text, row.sets);
+    if (saved) flash('Saved');
+    drawPrompts();                   // re-renders from what the server actually stored
+  }
+
+  /** Add however many lines are in the box, each into the sets lit up beside it. */
+  async function addPrompts() {
+    const box = el('newprompt');
+    const lines = box.value.split('\n').map((s) => s.trim()).filter(Boolean);
+    if (!lines.length) { flash('Write something first', true); return; }
+    if (!newSets.length) { flash('Pick at least one set', true); return; }
+    let added = 0;
+    for (const text of lines) {
+      if (await savePrompt(null, text, newSets)) added++;
+    }
+    if (added) {
+      box.value = '';
+      prompts.sort((a, b) => (a.id < b.id ? -1 : 1));
+      flash(added + (added === 1 ? ' prompt added' : ' prompts added'));
+    }
+    drawPromptFilters();
+    drawPrompts();
+  }
+
+  /** Two taps to delete: there is no un-reject list for a sentence you wrote. */
+  async function dropPrompt(id, button) {
+    if (button.dataset.sure !== '1') {
+      linesEl.querySelectorAll('[data-sure="1"]').forEach((b) => {
+        b.dataset.sure = '0'; b.textContent = '✕';
+      });
+      button.dataset.sure = '1';
+      button.textContent = 'Delete?';
+      return;
+    }
+    if (busy) return;
+    busy = true;
+    try {
+      const response = await fetch(apiUrl('api/prompt-drop'), {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id: id}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'could not delete that');
+      prompts = prompts.filter((p) => p.id !== id);
+      flash('Gone');
+    } catch (err) {
+      flash(String(err.message || err), true);
+    } finally {
+      busy = false;
+      drawPromptFilters();
+      drawPrompts();
+    }
+  }
+
   // --- discover: you search, it shows the results --------------------------
   function drawResults() {
     noResultsEl.hidden = results.length > 0;
@@ -479,12 +679,25 @@
   // --- input -------------------------------------------------------------
   document.addEventListener('click', (event) => {
     const hit = event.target.closest(
-      '[data-action], [data-tab], [data-filter], [data-card-set], [data-result-set], [data-drop], [data-unignore]');
+      '[data-action], [data-tab], [data-filter], [data-card-set], [data-result-set], [data-drop], ' +
+      '[data-unignore], [data-pfilter], [data-prompt-set], [data-prompt-drop], [data-newset]');
     if (!hit) return;
     if (hit.dataset.tab) return void showTab(hit.dataset.tab);
     if (hit.dataset.filter) { filter = hit.dataset.filter; drawFilters(); drawGrid(); return; }
+    if (hit.dataset.pfilter) { pFilter = hit.dataset.pfilter; drawPromptFilters(); drawPrompts(); return; }
     if (hit.dataset.drop) return void reject(hit.dataset.drop);
     if (hit.dataset.unignore) return void unignore(hit.dataset.unignore);
+    if (hit.dataset.promptDrop) return void dropPrompt(hit.dataset.promptDrop, hit);
+    if (hit.dataset.newset !== undefined && hit.dataset.setName) {
+      newSets = toggled(newSets, hit.dataset.setName);
+      drawNewSets();
+      return;
+    }
+    if (hit.dataset.promptSet !== undefined && hit.dataset.setName) {
+      const row = prompts.find((p) => p.id === hit.dataset.promptSet);
+      if (row) retagPrompt(row.id, toggled(row.sets, hit.dataset.setName));
+      return;
+    }
     if (hit.dataset.cardSet !== undefined && hit.dataset.setName) {
       const card = cards.find((c) => c.source_id === hit.dataset.cardSet);
       if (card) retag(card.source_id, toggled(card.sets, hit.dataset.setName));
@@ -499,6 +712,21 @@
       case 'search': doSearch(false); break;
       case 'more': doSearch(true); break;
       case 'add-links': addLinks(); break;
+      case 'add-prompt': addPrompts(); break;
+    }
+  });
+
+  // An edited line saves when you click away — `change` only fires if the text actually
+  // differs, so tabbing through the list doesn't write 150 identical rows.
+  document.addEventListener('change', (event) => {
+    const box = event.target.closest('[data-prompt-text]');
+    if (box) editPrompt(box.dataset.promptText, box.value);
+  });
+
+  linesEl.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && event.target.matches('[data-prompt-text]')) {
+      event.preventDefault();
+      event.target.blur();          // which fires `change`, and saves
     }
   });
 
@@ -507,6 +735,7 @@
   });
 
   renderCounts({{ counts | tojson }});
+  drawNewSets();
   loadLibrary();
 })();
 </script>

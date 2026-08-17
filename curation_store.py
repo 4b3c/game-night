@@ -1,7 +1,8 @@
-"""The two files that describe the deck, and the only code that writes them.
+"""The files that describe the deck, and the only code that writes them.
 
     curation/library.json   every card that is in the game
     curation/ignored.json   cards deliberately rejected, so search stops offering them
+    curation/prompts.json   every prompt, and which modes it plays in
 
 That is the whole model. It replaces an older `decisions.json` that mixed three things
 together: cards in the game, cards explicitly rejected, and a long tail of "this scrolled
@@ -15,6 +16,11 @@ scripts/rehydrate_gifs.py), what sets it is in, and how it has actually performe
 
 so `wins / uses` is a real answer to "is this card funny", earned at the table rather
 than guessed at by whoever tagged it.
+
+A prompt records its text and the same `sets` a card has, because a mode is a pairing:
+18+ deals 18+ GIFs against 18+ prompts. Prompts used to live in app/data/prompts.json and
+travel only in git, which meant editing one was a commit-pull-rebuild — they are here now
+so the curator can write them while the game is running, exactly like cards.
 
 Two processes touch these files — the curator and the game, in separate containers, both
 writing counters — so every write takes an exclusive lock and re-reads first. The read is
@@ -37,7 +43,11 @@ ROOT = Path(__file__).resolve().parent
 STATE_DIR = ROOT / "curation"
 LIBRARY = STATE_DIR / "library.json"
 IGNORED = STATE_DIR / "ignored.json"
+PROMPTS = STATE_DIR / "prompts.json"
 LOCK = STATE_DIR / ".lock"
+
+# One lock file covers all three, so a single flock is enough no matter what is being
+# written. They are small and rarely written; contention is not a real concern.
 
 # Within one process, threads share the file lock's fate, so guard them too: flock is
 # per-file-descriptor and two threads in one process would otherwise interleave freely.
@@ -61,20 +71,20 @@ def _exclusive():
                 fcntl.flock(handle, fcntl.LOCK_UN)
 
 
-def _read(path: Path) -> dict:
+def _read(path: Path, section: str = "cards") -> dict:
     if not path.exists():
-        return {"version": 1, "cards": {}}
+        return {"version": 1, section: {}}
     try:
         data = json.loads(path.read_text())
     except json.JSONDecodeError:
-        return {"version": 1, "cards": {}}
-    data.setdefault("cards", {})
+        return {"version": 1, section: {}}
+    data.setdefault(section, {})
     return data
 
 
-def _write(path: Path, data: dict) -> None:
+def _write(path: Path, data: dict, section: str = "cards") -> None:
     """Replace the file atomically, so a reader never sees it half-written."""
-    data["cards"] = dict(sorted(data.get("cards", {}).items()))
+    data[section] = dict(sorted(data.get(section, {}).items()))
     path.parent.mkdir(parents=True, exist_ok=True)
     handle, temporary = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
     with os.fdopen(handle, "w") as out:
@@ -143,6 +153,73 @@ def unignore(source_id: str) -> None:
         data = _read(IGNORED)
         if data["cards"].pop(source_id, None) is not None:
             _write(IGNORED, data)
+
+
+# --- prompts ----------------------------------------------------------------------
+def prompts() -> dict[str, dict]:
+    with _exclusive():
+        return _read(PROMPTS, "prompts")["prompts"]
+
+
+def update_prompts(change: Callable[[dict], None]) -> dict[str, dict]:
+    """Re-read, apply `change` to the prompts dict, write back — all under the lock."""
+    with _exclusive():
+        data = _read(PROMPTS, "prompts")
+        change(data["prompts"])
+        _write(PROMPTS, data, "prompts")
+        return data["prompts"]
+
+
+def put_prompt(prompt_id: str, fields: dict) -> dict:
+    """Add or update one prompt, stamping `added` the first time it appears."""
+    result = {}
+
+    def change(rows: dict) -> None:
+        row = rows.setdefault(prompt_id, {"added": now()})
+        row.update({k: v for k, v in fields.items() if v is not None})
+        row.setdefault("added", now())
+        row.setdefault("blanks", 1)
+        row.setdefault("sets", [])
+        result.update(row)
+
+    update_prompts(change)
+    return result
+
+
+def add_prompt(text: str, sets: list[str], blanks: int = 1) -> tuple[str, dict]:
+    """Write a brand new prompt, choosing its id under the lock.
+
+    Allocating the id inside the same critical section as the write is what stops two
+    people curating at once from both claiming p151 and one of them silently overwriting
+    the other's line.
+    """
+    created: dict = {}
+    chosen = ""
+
+    def change(rows: dict) -> None:
+        nonlocal chosen
+        taken = set(rows)
+        number = len(rows) + 1
+        while f"p{number:03d}" in taken:
+            number += 1
+        chosen = f"p{number:03d}"
+        created.update({"text": text, "blanks": blanks, "sets": sets, "added": now()})
+        rows[chosen] = dict(created)
+
+    update_prompts(change)
+    return chosen, created
+
+
+def drop_prompt(prompt_id: str) -> bool:
+    """Delete a prompt outright. Returns whether there was one to delete."""
+    existed = False
+
+    def change(rows: dict) -> None:
+        nonlocal existed
+        existed = rows.pop(prompt_id, None) is not None
+
+    update_prompts(change)
+    return existed
 
 
 # --- what the game reports back ---------------------------------------------------

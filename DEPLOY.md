@@ -160,15 +160,18 @@ It rsyncs `app/static/gifs/` (GIFs + manifest) and restarts the container. The o
 file is gitignored, so `git pull` won't fight it. Aim for 56 GIFs per mode — eight players
 hold 56 cards at once, and the lobby greys out modes that aren't there yet.
 
-Prompts travel in git: edit `app/data/prompts.json`, commit, pull, `docker compose up -d
---build`.
+Prompts travel in git too, in `curation/prompts.json` — but they no longer need a deploy
+to change: the curator writes that file and the game re-reads it when it changes, so a
+prompt written on the server is in the next round. Commit it when you next pull, the same
+as `library.json`.
 
 ## The curator, published for friends
 
-The curator runs on the server, writing straight into the folder the game reads — tag a
-card and it's in the next game, no rsync, no restart (the app re-reads the manifest when it
-changes). It lives at `https://your.domain/curate`, behind a shared password, so you can
-hand the link to whoever is helping you build the deck.
+The curator runs on the server, writing straight into the folders the game reads — tag a
+card or write a prompt and it's in the next game, no rsync, no restart (the app re-reads
+both the manifest and `curation/prompts.json` when they change). It lives at
+`https://your.domain/curate`, behind a shared password, so you can hand the link to
+whoever is helping you build the deck.
 
 ```bash
 cd /opt/game-night
@@ -189,7 +192,7 @@ docker compose --profile curator up -d --build
 Then add this to the **same** `server {}` block as the game, above `location /`:
 
 ```nginx
-    # The GIF curator. Password-gated by the app itself; the trailing-slash-free
+    # The deck curator. Password-gated by the app itself; the trailing-slash-free
     # proxy_pass plus X-Forwarded-Prefix is what makes its own links come back here
     # instead of landing on the game.
     location /curate {

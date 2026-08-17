@@ -467,6 +467,14 @@
     return found ? found.emoji + ' ' + found.label : id;
   }
 
+  /** The line under a mode button: what it has, or what it's missing. `why` names the
+   *  shortage in full on hover; this is the version that fits in a pill. */
+  function modeShort(m) {
+    if (m.enough) return m.cards + ' GIFs';
+    if (/prompt/.test(m.why || '')) return m.prompts ? 'only ' + m.prompts + ' prompts' : 'no prompts';
+    return m.cards ? 'only ' + m.cards : 'none yet';
+  }
+
   /** The one decision that matters, up front: which set of GIFs are we playing with. */
   function modePickerHtml(editable) {
     const chosen = state.options.mode;
@@ -481,16 +489,16 @@
           modes
             .map(function (m) {
               const on = m.id === chosen;
-              // A mode with too few curated GIFs can't be played yet — say so instead of
-              // failing at Start.
+              // A mode needs both halves of a deck — curated GIFs and written prompts —
+              // and says which one it's short of instead of failing at Start.
               return (
                 '<button class="mode' + (on ? ' mode--on' : '') + (m.enough ? '' : ' mode--empty') + '"' +
                 ' data-opt="mode" data-value="' + esc(m.id) + '" aria-pressed="' + (on ? 'true' : 'false') + '"' +
-                (m.enough ? '' : ' disabled title="Not enough GIFs curated for this mode yet"') +
+                (m.enough ? '' : ' disabled title="' + esc(m.why || 'Not ready yet') + '"') +
                 ' type="button">' +
                   '<span class="mode__emoji" aria-hidden="true">' + esc(m.emoji) + '</span>' +
                   '<span class="mode__label">' + esc(m.label) + '</span>' +
-                  '<span class="mode__cards">' + (m.enough ? m.cards + ' GIFs' : (m.cards ? 'only ' + m.cards : 'none yet')) + '</span>' +
+                  '<span class="mode__cards">' + esc(modeShort(m)) + '</span>' +
                 '</button>'
               );
             })

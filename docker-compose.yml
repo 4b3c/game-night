@@ -36,9 +36,9 @@ services:
       # The cards themselves, read-only: the image ships the manifest but not the GIFs
       # (they are not in git — see scripts/rehydrate_gifs.py), so they come from the host.
       - ./app/static/gifs:/app/app/static/gifs:ro
-      # Writable, because the game records which cards were played and which won into
-      # curation/library.json at the end of every round. Both files are shared with the
-      # curator container, which is why every write takes a lock.
+      # The rest of the deck: the prompts the game deals from, and the card library it
+      # writes back into — every round records which cards were played and which won.
+      # Shared with the curator container, which is why every write takes a lock.
       - ./curation:/app/curation:rw
 
     logging:
@@ -47,7 +47,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # The GIF curator. Off by default — start it when you want to curate:
+  # The deck curator (GIFs and prompts). Off by default — start it when you want to curate:
   #
   #   docker compose --profile curator up -d curator
   #   docker compose --profile curator down

@@ -26,6 +26,7 @@ from .decks import (
     build_prompt_deck,
     gif_index,
     mode_counts,
+    prompt_counts,
     prompt_index,
 )
 
@@ -336,6 +337,16 @@ class Game:
                 f"players need {needed}. Curate more with scripts/curate_gifs.py, or pick "
                 f"another mode."
             )
+        # Same check for the other half of the deck: a mode whose prompts have all been
+        # untagged in the curator would otherwise deal fine and then die on round one.
+        prompt_deck = build_prompt_deck(self._rng, self.options.mode)
+        if len(prompt_deck) < PROMPT_CHOICES:
+            mode_label = MODES[self.options.mode]["label"]
+            raise ActionError(
+                f"{mode_label} mode only has {len(prompt_deck)} prompts — a round needs "
+                f"{PROMPT_CHOICES} to choose between. Add some in the curator's Prompts tab."
+            )
+
         hands = {pid: gif_deck.draw_many(HAND_SIZE) for pid in self.players}
 
         self._rng.shuffle(self.seat_order)
@@ -343,7 +354,7 @@ class Game:
             self.players[pid].seat = seat
 
         self._gif_deck = gif_deck
-        self._prompt_deck = build_prompt_deck(self._rng)
+        self._prompt_deck = prompt_deck
         for pid, player in self.players.items():
             player.score = 0
             player.hand = hands[pid]
@@ -669,8 +680,8 @@ class Game:
         return prompt_index().get(self.prompt_id)
 
     def public_state(self) -> dict:
-        prompts = prompt_index()
         counts = mode_counts()
+        prompts = prompt_counts()
         waiting_on = [
             {"nickname": p.nickname, "avatar": p.avatar, "connected": p.connected}
             for p in self._non_judge_players()
@@ -699,18 +710,29 @@ class Game:
             "tv_connected": self.tv_count > 0,
             "min_players": self.options.min_players,
             "max_players": MAX_PLAYERS,
-            "modes": [
-                {
-                    "id": name,
-                    "label": meta["label"],
-                    "emoji": meta["emoji"],
-                    "cards": counts.get(name, 0),
-                    "enough": counts.get(name, 0) >= max(len(self.players), MIN_PLAYERS) * HAND_SIZE,
-                }
-                for name, meta in MODES.items()
-            ],
+            "modes": [self._mode_view(name, meta, counts, prompts) for name, meta in MODES.items()],
             "can_start": len(self.players) >= self.options.min_players,
-            "prompt_count": len(prompts),
+            "prompt_count": prompts.get(self.options.mode, 0),
+        }
+
+    def _mode_view(self, name: str, meta: dict, cards: dict, prompts: dict) -> dict:
+        """One lobby button. A mode needs both halves of a deck to be playable, so it
+        carries why it isn't rather than leaving the button to guess."""
+        needed = max(len(self.players), MIN_PLAYERS) * HAND_SIZE
+        gifs, written = cards.get(name, 0), prompts.get(name, 0)
+        why = ""
+        if gifs < needed:
+            why = f"Only {gifs} GIFs curated for this mode — {needed} needed"
+        elif written < PROMPT_CHOICES:
+            why = f"Only {written} prompts written for this mode"
+        return {
+            "id": name,
+            "label": meta["label"],
+            "emoji": meta["emoji"],
+            "cards": gifs,
+            "prompts": written,
+            "enough": not why,
+            "why": why,
         }
 
     def view_for(self, pid: str) -> dict:

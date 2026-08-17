@@ -1,7 +1,12 @@
 """Card sources for Gifs Against Humanity: the prompt deck and the GIF deck.
 
 Both are draw-pile/discard-pile decks that reshuffle when exhausted, so a long night
-never runs out of cards. Loading is cached -- the JSON files are read once per process.
+never runs out of cards.
+
+Both are also re-read whenever their file changes on disk, rather than cached for the
+life of the process: the curator (scripts/curate_gifs.py) writes to both while the game
+is running, and anything you tag or write there should be in the next game without a
+restart.
 """
 
 from __future__ import annotations
@@ -9,11 +14,11 @@ from __future__ import annotations
 import json
 import random
 import threading
-from functools import lru_cache
 from pathlib import Path
+from typing import Callable
 
 APP_DIR = Path(__file__).resolve().parents[2]
-PROMPTS_PATH = APP_DIR / "data" / "prompts.json"
+PROMPTS_PATH = APP_DIR.parent / "curation" / "prompts.json"
 GIF_MANIFEST_PATH = APP_DIR / "static" / "gifs" / "manifest.json"
 
 
@@ -21,33 +26,72 @@ class DeckError(RuntimeError):
     pass
 
 
-@lru_cache(maxsize=1)
-def load_prompts() -> tuple[dict, ...]:
-    """[{id, text, blanks}] from app/data/prompts.json."""
+class _Reloading:
+    """A file's contents, parsed once and then again each time the file changes.
+
+    Holds whatever `build` returned, so anything derived from the file — an id index,
+    say — is cached with it and rebuilt on the same trigger rather than on every call.
+    """
+
+    def __init__(self, path: Path, build: Callable[[], object]):
+        self.path = path
+        self.build = build
+        self.lock = threading.Lock()
+        self.cached: tuple[int, object] | None = None
+
+    def stamp(self) -> int:
+        try:
+            return self.path.stat().st_mtime_ns
+        except OSError:
+            return 0
+
+    def get(self):
+        stamp = self.stamp()
+        cached = self.cached
+        if cached is not None and cached[0] == stamp:
+            return cached[1]
+        with self.lock:
+            cached = self.cached
+            if cached is not None and cached[0] == stamp:
+                return cached[1]
+            built = self.build()
+            self.cached = (stamp, built)
+            return built
+
+
+def _read_prompts() -> tuple[tuple[dict, ...], dict[str, dict]]:
+    """[{id, text, blanks, sets}] from curation/prompts.json, plus an index by id.
+
+    Prompts live beside the cards, in the folder both containers mount, because the
+    curator writes them: they used to be baked into the image at app/data/prompts.json,
+    where changing one meant a commit and a rebuild.
+    """
+    if not PROMPTS_PATH.exists():
+        raise DeckError(f"{PROMPTS_PATH} missing — prompts live there now, not in app/data")
     raw = json.loads(PROMPTS_PATH.read_text())
-    prompts = raw["prompts"] if isinstance(raw, dict) else raw
+    rows = raw["prompts"] if isinstance(raw, dict) else raw
+    # A dict keyed by id is the file's shape; a list of entries is the older one.
+    pairs = rows.items() if isinstance(rows, dict) else ((p.get("id"), p) for p in rows)
     out = []
-    for p in prompts:
-        if not p.get("id") or not p.get("text"):
+    for prompt_id, p in pairs:
+        if not prompt_id or not p.get("text"):
             continue
-        out.append({"id": p["id"], "text": p["text"], "blanks": int(p.get("blanks", 1))})
+        out.append(
+            {
+                "id": prompt_id,
+                "text": p["text"],
+                "blanks": int(p.get("blanks", 1)),
+                "sets": _sets_of(p),
+            }
+        )
     if len(out) < 10:
         raise DeckError(f"only {len(out)} prompts loaded from {PROMPTS_PATH}")
-    return tuple(out)
+    prompts = tuple(out)
+    return prompts, {p["id"]: p for p in prompts}
 
 
-# The manifest is re-read whenever it changes on disk, rather than cached for the life of
-# the process: the curator (scripts/curate_gifs.py) writes to it while the game is running,
-# and cards you tag should show up in the next game without a restart.
-_gif_lock = threading.Lock()
-_gif_cache: tuple[int, tuple[dict, ...]] | None = None
-
-
-def _manifest_stamp() -> int:
-    try:
-        return GIF_MANIFEST_PATH.stat().st_mtime_ns
-    except OSError:
-        return 0
+def load_prompts() -> tuple[dict, ...]:
+    return _prompt_file.get()[0]
 
 
 def load_gifs() -> tuple[dict, ...]:
@@ -57,31 +101,20 @@ def load_gifs() -> tuple[dict, ...]:
     curated GIFs are rsynced separately, so a partially-synced folder should mean fewer
     cards, not broken pictures mid-game.
     """
-    global _gif_cache
-    stamp = _manifest_stamp()
-    cached = _gif_cache
-    if cached is not None and cached[0] == stamp:
-        return cached[1]
-    with _gif_lock:
-        cached = _gif_cache
-        if cached is not None and cached[0] == stamp:
-            return cached[1]
-        gifs = _read_manifest()
-        _gif_cache = (stamp, gifs)
-        return gifs
+    return _gif_file.get()[0]
 
 
-def _read_manifest() -> tuple[dict, ...]:
+def _read_manifest() -> tuple[tuple[dict, ...], dict[str, dict]]:
     if not GIF_MANIFEST_PATH.exists():
         raise DeckError(
             f"{GIF_MANIFEST_PATH} missing -- run `python scripts/rehydrate_gifs.py` to "
-            f"rebuild the cards from curation/decisions.json"
+            f"rebuild the cards from curation/library.json"
         )
     raw = json.loads(GIF_MANIFEST_PATH.read_text())
-    gifs = raw["gifs"] if isinstance(raw, dict) else raw
+    rows = raw["gifs"] if isinstance(raw, dict) else raw
     out = []
     missing = 0
-    for g in gifs:
+    for g in rows:
         if not g.get("id") or not g.get("file"):
             continue
         if not (GIF_MANIFEST_PATH.parent / g["file"]).is_file():
@@ -105,21 +138,32 @@ def _read_manifest() -> tuple[dict, ...]:
         print(f"[gah] {missing} gif(s) in the manifest are not on disk — skipping them")
     if len(out) < 16:
         raise DeckError(f"only {len(out)} gifs loaded from {GIF_MANIFEST_PATH}")
-    return tuple(out)
+    gifs = tuple(out)
+    return gifs, {g["id"]: g for g in gifs}
+
+
+_prompt_file = _Reloading(PROMPTS_PATH, _read_prompts)
+_gif_file = _Reloading(GIF_MANIFEST_PATH, _read_manifest)
 
 
 def _sets_of(entry: dict) -> tuple[str, ...]:
-    """Modes an entry belongs to, tolerating the older single-`rating` manifests."""
+    """Modes a card or prompt belongs to, tolerating older single-`rating` manifests.
+
+    An empty list is honoured as "no modes" rather than treated as missing: a prompt with
+    every set turned off is retired but still on file, which is a state cards can't be in
+    (untagging a card removes it outright).
+    """
     sets = entry.get("sets")
-    if isinstance(sets, (list, tuple)) and sets:
+    if isinstance(sets, (list, tuple)):
         return tuple(str(s) for s in sets)
     legacy = {"sfw": "normal", "adult": "adult", "millennial": "millennial"}
     return (legacy.get(entry.get("rating", "sfw"), "normal"),)
 
 
 # --- modes ---------------------------------------------------------------------
-# Each mode deals from its own set of cards, tagged by scripts/curate_gifs.py. Adding a
-# fourth mode is one entry here plus one button in the lobby.
+# Each mode deals from its own set of cards *and* its own set of prompts, both tagged by
+# scripts/curate_gifs.py. Adding a fourth mode is one entry here plus one button in the
+# lobby.
 MODES: dict[str, dict] = {
     "normal": {"label": "Normal", "emoji": "🙂"},
     "adult": {"label": "18+", "emoji": "🌶️"},
@@ -134,13 +178,24 @@ def gifs_for_mode(mode: str) -> tuple[dict, ...]:
     return tuple(g for g in load_gifs() if wanted in g["sets"])
 
 
+def prompts_for_mode(mode: str) -> tuple[dict, ...]:
+    """The prompts this mode plays with. A prompt can belong to more than one mode."""
+    wanted = mode if mode in MODES else DEFAULT_MODE
+    return tuple(p for p in load_prompts() if wanted in p["sets"])
+
+
 def mode_counts() -> dict[str, int]:
     """How many cards each mode has — the lobby shows this so you can see what's ready."""
     return {name: len(gifs_for_mode(name)) for name in MODES}
 
 
+def prompt_counts() -> dict[str, int]:
+    """How many prompts each mode has. A mode with none can't be played at all."""
+    return {name: len(prompts_for_mode(name)) for name in MODES}
+
+
 def gif_index() -> dict[str, dict]:
-    return {g["id"]: g for g in load_gifs()}
+    return _gif_file.get()[1]
 
 
 class Deck:
@@ -175,10 +230,11 @@ def build_gif_deck(rng: random.Random, mode: str = DEFAULT_MODE) -> Deck:
     return Deck([g["id"] for g in gifs_for_mode(mode)], rng)
 
 
-def build_prompt_deck(rng: random.Random) -> Deck:
-    return Deck([p["id"] for p in load_prompts()], rng)
+def build_prompt_deck(rng: random.Random, mode: str = DEFAULT_MODE) -> Deck:
+    return Deck([p["id"] for p in prompts_for_mode(mode)], rng)
 
 
-@lru_cache(maxsize=1)
 def prompt_index() -> dict[str, dict]:
-    return {p["id"]: p for p in load_prompts()}
+    """Every prompt by id, mode or no mode — a round in progress still has to be able to
+    look up the prompt it is already showing, even if it was retired mid-game."""
+    return _prompt_file.get()[1]

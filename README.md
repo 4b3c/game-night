@@ -77,16 +77,18 @@ The bots wait for you to join, start the game, and play their part.
 **The look** — `app/static/css/theme.css` holds every colour, radius, outline, shadow, font
 and timing as a CSS custom property. Change a value, reload. No build step, no npm.
 
-**The prompts** — `app/data/prompts.json`. One object per card: `{"id", "text", "blanks"}`,
-with `___` marking the blank. Add or delete freely; ids only need to be unique.
+**The prompts** — write them in the curator's **Prompts** tab, or edit
+`curation/prompts.json` directly: one entry per prompt, keyed by id, with `___` marking
+the blank and `sets` naming the modes it plays in.
 
 **The GIFs** — use the curator below. Aim for 56+ per mode so eight hands of seven don't
 recycle constantly.
 
-## Curating real GIFs
+## Curating the deck
 
 Three modes — **Normal**, **18+** and **Millennial** — each deal from their own pile of
-cards. You fill those piles by swiping:
+cards *and* their own pile of prompts, because a mode is a pairing: 18+ GIFs answering
+18+ prompts. You fill both piles here:
 
 ```bash
 export GIPHY_API_KEY=xxxxxxxx        # developers.giphy.com -> Create an App -> API
@@ -115,23 +117,33 @@ python scripts/curate_gifs.py --rating pg-13    # tighten what the API returns
 A mode needs **56 cards** before eight people can play it (28 for four); the lobby greys out
 modes that aren't ready and the curator shows a progress meter for each.
 
-**Both tabs are the same grid.** Library shows what's in the game; Discover shows what a
-search turned up. Under every card are the three set buttons — tap **Normal**, **18+** or
-**Millennial** to put it in or take it out — and a ✕ that means *not funny*: the card
-leaves the game and search never offers it again. The Rejected filter lists those and can
-undo any of them.
+**Library and Discover are the same grid.** Library shows what's in the game; Discover
+shows what a search turned up. Under every card are the three set buttons — tap
+**Normal**, **18+** or **Millennial** to put it in or take it out — and a ✕ that means
+*not funny*: the card leaves the game and search never offers it again. The Rejected
+filter lists those and can undo any of them.
 
-## Where the GIFs live
+**Prompts** is the same idea for the words. Type one — or several, one per line — pick the
+sets it belongs in, and Add. Every prompt already written is listed below, filterable by
+set, with the same three buttons: tap **18+** on a prompt and it starts appearing in 18+
+games. Click any line to edit it; it saves when you click away. The ✕ deletes, and asks
+once first, because unlike a card there is no rejected list to fish it back out of.
+
+Turning every set off leaves a prompt on file but out of play — a soft retirement, and the
+only state a card can't be in.
+
+## Where the deck lives
 
 The GIF files are **not in git**, and the repo is public on purpose. What's committed is
-two small JSON files in `curation/`, and they are the whole state of the deck:
+three small JSON files in `curation/`, and they are the whole state of the deck:
 
 | | |
 |---|---|
 | `library.json` | every card in the game: the link it came from, its sets, its size, and how often it has been **played** and **won** |
 | `ignored.json` | cards you rejected with ✕ — read only by search, so they stop coming back |
+| `prompts.json` | every prompt, its text, and the modes it plays in |
 
-Both stamp when a card entered the list it's in. That's a few tens of KB of text that
+Each stamps when an entry joined the list it's in. That's a few tens of KB of text that
 diffs cleanly, versus ~70 MB of binaries that would sit in the history forever and make
 the repo heavy for anyone who clones it.
 

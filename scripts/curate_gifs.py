@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Browse GIFs and put them into the game's sets.
+"""Build the game's deck: the GIFs, and the prompts they answer.
 
-A web app with two tabs, both of them a grid of GIFs you tag by tapping a set's button.
-A GIF can be in several sets at once, so a cursed one can be in both Normal and 18+.
+A web app with three tabs. A GIF or a prompt can be in several sets at once, so a cursed
+GIF can be in both Normal and 18+, and so can the prompt it answers.
 
     python scripts/curate_gifs.py          # then open http://127.0.0.1:5099
 
     Library    every card already in the game, filterable by set
     Discover   you search, it shows the results, you tag the ones you want
+    Prompts    write them, edit them, and choose which modes they play in
 
 There are deliberately no built-in search terms. There used to be ~100 hardcoded moods
 ("backrooms", "capybara") that the tool searched at random whenever you hadn't typed
@@ -18,9 +19,11 @@ Your own GIFs: paste links on the Library tab — Tenor, Discord, anywhere. A li
 than a file upload, because a link is what lets the card be rebuilt on another machine
 (see scripts/rehydrate_gifs.py).
 
-State is two files, both in `curation/`: `library.json` is every card in the game — where
-it came from, which sets it's in, and how often it has been played and won — and
-`ignored.json` is the ones you rejected, which only ever stops search offering them again.
+State is three files, all in `curation/`: `library.json` is every card in the game — where
+it came from, which sets it's in, and how often it has been played and won —
+`ignored.json` is the ones you rejected, which only ever stops search offering them again,
+and `prompts.json` is every prompt and the modes it plays in. The game reads all three
+live, so anything you change here is in the next round, without a restart.
 
 Where to get an API key:
   giphy: developers.giphy.com -> Create an Account -> Create an App -> pick "API"
@@ -592,6 +595,74 @@ class Library:
         self._write_manifest([e for e in self._manifest_entries() if e.get("file") != filename])
 
 
+# --- prompts --------------------------------------------------------------------
+# A prompt is text and the modes it plays in — the same three sets a GIF has, because a
+# mode is a pairing: 18+ deals 18+ GIFs against 18+ prompts. No state to hold, so these
+# are plain functions over curation/prompts.json rather than a class like Library.
+MAX_PROMPT_CHARS = 200
+
+
+def _count_blanks(text: str) -> int:
+    """How many gaps the sentence has. The game draws `___` as a blank line, so this is
+    read off the text rather than typed in — one less field to get wrong."""
+    return max(1, len(re.findall(r"_{2,}", text)))
+
+
+def prompt_rows() -> list[dict]:
+    """Every prompt, in id order — which is the order they were written in."""
+    return [
+        {
+            "id": prompt_id,
+            "text": row.get("text", ""),
+            "sets": [s for s in (row.get("sets") or []) if s in SETS],
+            "blanks": int(row.get("blanks", 1)),
+            "added": row.get("added"),
+        }
+        for prompt_id, row in sorted(store.prompts().items())
+    ]
+
+
+def prompt_counts() -> dict:
+    """How many prompts each mode has, for the Prompts tab's own filter row."""
+    rows = store.prompts().values()
+    counts = {name: 0 for name in SETS}
+    for row in rows:
+        for name in row.get("sets") or []:
+            if name in counts:
+                counts[name] += 1
+    counts["all"] = len(list(rows))
+    return counts
+
+
+def clean_prompt(text: str) -> str:
+    text = re.sub(r"\s+", " ", (text or "").strip())
+    if not text:
+        raise ValueError("a prompt needs some words")
+    if len(text) > MAX_PROMPT_CHARS:
+        raise ValueError(f"that's over {MAX_PROMPT_CHARS} characters — it won't fit on a card")
+    return text
+
+
+def save_prompt(prompt_id: str | None, text: str, sets: list[str]) -> dict:
+    """Write a prompt, new or existing. Returns it in the shape the tab renders."""
+    text = clean_prompt(text)
+    wanted = [s for s in sets if s in SETS]
+    fields = {"text": text, "sets": wanted, "blanks": _count_blanks(text)}
+    if prompt_id:
+        if prompt_id not in store.prompts():
+            raise KeyError(prompt_id)
+        row = store.put_prompt(prompt_id, fields)
+    else:
+        prompt_id, row = store.add_prompt(text, wanted, fields["blanks"])
+    return {
+        "id": prompt_id,
+        "text": row["text"],
+        "sets": list(row.get("sets") or []),
+        "blanks": int(row.get("blanks", 1)),
+        "added": row.get("added"),
+    }
+
+
 # --- web app -------------------------------------------------------------------
 class PrefixMiddleware:
     """Let the curator live under a path like /curate on a domain it shares.
@@ -803,6 +874,39 @@ def build_app(library: Library, source, password: str) -> Flask:
             skipped=len(found) - len(results),
         )
 
+    # -- prompts ---------------------------------------------------------
+    @app.get("/api/prompts")
+    def api_prompts():
+        return jsonify(prompts=prompt_rows(), counts=prompt_counts())
+
+    @app.post("/api/prompt-save")
+    def api_prompt_save():
+        """Create or edit one prompt. No id means new; an id means edit in place, which
+        is also how the set chips are toggled — the same write either way."""
+        data = request.get_json(silent=True) or {}
+        wanted = data.get("sets")
+        if not isinstance(wanted, list):
+            return jsonify(error="bad request"), 400
+        try:
+            row = save_prompt((data.get("id") or "").strip() or None, data.get("text") or "", wanted)
+        except KeyError:
+            return jsonify(error="no such prompt"), 404
+        except ValueError as exc:
+            return jsonify(error=str(exc)), 400
+        return jsonify(ok=True, prompt=row, counts=prompt_counts())
+
+    @app.post("/api/prompt-drop")
+    def api_prompt_drop():
+        """Delete a prompt for good. Unlike a GIF there is nothing to un-reject: the text
+        is the whole card, and curation/prompts.json is in git if you want it back."""
+        data = request.get_json(silent=True) or {}
+        prompt_id = (data.get("id") or "").strip()
+        if not prompt_id:
+            return jsonify(error="bad request"), 400
+        if not store.drop_prompt(prompt_id):
+            return jsonify(error="no such prompt"), 404
+        return jsonify(ok=True, counts=prompt_counts())
+
     @app.post("/api/sets")
     def api_sets():
         data = request.get_json(silent=True) or {}
@@ -858,12 +962,17 @@ def main() -> int:
     library.source = source
     counts = library.counts()
 
-    print(f"\n  🃏 GIF curator — {args.source}, rating {source.rating}")
+    written = prompt_counts()
+    print(f"\n  🃏 Deck curator — {args.source}, rating {source.rating}")
     print(f"      open:   http://{args.host}:{args.port}{args.prefix}")
     print(f"      into:   {GIF_DIR}")
     print(
-        "      sets:   "
+        "      gifs:   "
         + "   ".join(f"{meta['label']} {counts['sets'][name]}/{CARDS_PER_MODE}" for name, meta in SETS.items())
+    )
+    print(
+        "      words:  "
+        + "   ".join(f"{meta['label']} {written[name]}" for name, meta in SETS.items())
     )
 
     app = build_app(library, source, password)
