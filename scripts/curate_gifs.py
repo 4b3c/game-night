@@ -729,6 +729,21 @@ class PrefixMiddleware:
         return self.app(environ, start_response)
 
 
+def _safe_next(target: str | None, fallback: str) -> str:
+    """Where to go after signing in — but only somewhere inside this app.
+
+    `next` arrives from the query string, so it is attacker-controlled: without this a
+    crafted link could bounce someone straight off the site the moment they authenticate.
+    Anything that isn't a plain path under our own root falls back to the front page.
+    """
+    if not target or not target.startswith("/"):
+        return fallback
+    if target.startswith("//") or "://" in target:  # protocol-relative or absolute
+        return fallback
+    root = (fallback or "/").rstrip("/")
+    return target if not root or target == root or target.startswith(root + "/") else fallback
+
+
 def build_app(queue: Queue, library: Library, source, min_frames: int, password: str) -> Flask:
     app = Flask(
         __name__,
@@ -765,7 +780,9 @@ def build_app(queue: Queue, library: Library, source, min_frames: int, password:
             return None
         if request.path.startswith("/api/"):
             return jsonify(error="not signed in"), 401
-        return redirect(url_for("login", next=request.path))
+        # script_root + path, not path: `path` is relative to the app, so under /curate it
+        # is just "/" — and sending someone there after login lands them on the game.
+        return redirect(url_for("login", next=request.script_root + request.path))
 
     @app.route("/login", methods=["GET", "POST"])
     def login():
@@ -777,7 +794,7 @@ def build_app(queue: Queue, library: Library, source, min_frames: int, password:
             elif hmac.compare_digest(request.form.get("password", ""), password):
                 session["curator"] = True
                 session.permanent = True
-                return redirect(request.args.get("next") or url_for("index"))
+                return redirect(_safe_next(request.args.get("next"), url_for("index")))
             else:
                 attempts.setdefault(ip, []).append(time.monotonic())
                 error = "That's not it."
