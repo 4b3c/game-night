@@ -82,6 +82,12 @@ and timing as a CSS custom property. Change a value, reload. No build step, no n
 `curation/prompts.json` directly: one entry per prompt, keyed by id, with `___` marking
 the blank and `sets` naming the pile it's in.
 
+The deck also ships the real **Cards Against Humanity** black cards — 842 of them, in the
+18+ pile, so they only turn up when the host switches "keep it clean" off. CAH release
+their own game under CC BY-NC-SA 4.0, which is what makes that legal; the terms that come
+with it are in [LICENSE-PROMPTS.md](LICENSE-PROMPTS.md), and the import is
+`scripts/import_cah_prompts.py`.
+
 **The GIFs** — use the curator below. Aim for 56+ in the Normal pile so eight hands of
 seven don't recycle constantly.
 
@@ -144,7 +150,7 @@ three small JSON files in `curation/`, and they are the whole state of the deck:
 |---|---|
 | `library.json` | every card in the game: the link it came from, its sets, its size, and how often it has been **played** and **won** |
 | `ignored.json` | cards you rejected with ✕ — read only by search, so they stop coming back |
-| `prompts.json` | every prompt, its text, and the pile it's in |
+| `prompts.json` | every prompt, its text, and the pile it's in (`source` says who wrote it — see [LICENSE-PROMPTS.md](LICENSE-PROMPTS.md)) |
 
 Each stamps when an entry joined the list it's in. That's a few tens of KB of text that
 diffs cleanly, versus ~70 MB of binaries that would sit in the history forever and make
