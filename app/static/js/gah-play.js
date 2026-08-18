@@ -494,18 +494,10 @@
     );
   }
 
-  /** The line under the switch: what's in the deck, and what flipping it would do. */
+  /** The line under the switch. What the switch does, not how big the deck is — nobody
+   *  sitting down to play needs a card count. */
   function deckLine(d) {
-    if (!d.clean) {
-      return '18+ cards and prompts are in — ' + d.gifs + ' GIFs, ' + d.prompts + ' prompts';
-    }
-    if (!d.adds.gifs && !d.adds.prompts) {
-      return d.gifs + ' GIFs, ' + d.prompts + ' prompts — nothing is tagged 18+ yet';
-    }
-    const extra = [];
-    if (d.adds.gifs) extra.push(d.adds.gifs + ' GIFs');
-    if (d.adds.prompts) extra.push(d.adds.prompts + ' prompts');
-    return d.gifs + ' GIFs, ' + d.prompts + ' prompts — turn off to add ' + extra.join(' and ');
+    return d.clean ? '18+ cards and prompts stay out' : '18+ cards and prompts are in';
   }
 
   /** The one decision that matters, up front: is the 18+ pile in or out?

@@ -710,12 +710,10 @@ class Game:
         }
 
     def _deck_view(self) -> dict:
-        """What the switch is worth, both ways, and whether the deck can be played.
+        """Whether the deck as switched can actually be dealt, and why not if it can't.
 
-        `adds` is what flipping "keep it clean" off would bring in. It's here so the lobby
-        can say "+6 GIFs" on the switch itself rather than making someone flip it to find
-        out — and so a table that has curated nothing 18+ can see there's nothing behind
-        it.
+        The counts are here for that judgement, not for display: the lobby says what the
+        switch does, never how many cards are behind it.
         """
         counts = deck_counts()
         clean = self.options.clean
@@ -731,10 +729,6 @@ class Game:
             "clean": clean,
             "gifs": gifs,
             "prompts": prompts,
-            "adds": {
-                "gifs": counts["spicy"]["gifs"] - counts["clean"]["gifs"],
-                "prompts": counts["spicy"]["prompts"] - counts["clean"]["prompts"],
-            },
             "ready": not why,
             "why": why,
         }

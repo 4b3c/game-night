@@ -315,7 +315,6 @@ def test_a_deck_without_enough_cards_says_so(monkeypatch):
     deck = game.public_state()["deck"]
     assert deck["ready"] is False
     assert "10 GIFs" in deck["why"]
-    assert deck["adds"] == {"gifs": 60, "prompts": 0}
 
     # And turning the switch off is enough to make it playable.
     game.set_options("p0", {"clean": False})
