@@ -1057,30 +1057,6 @@
       ],
       "added": "2026-08-17T00:00:00+00:00"
     },
-    "p133": {
-      "text": "The landlord fixed it with ___.",
-      "blanks": 1,
-      "sets": [
-        "normal"
-      ],
-      "added": "2026-08-17T00:00:00+00:00"
-    },
-    "p134": {
-      "text": "My apartment's defining feature is ___.",
-      "blanks": 1,
-      "sets": [
-        "normal"
-      ],
-      "added": "2026-08-17T00:00:00+00:00"
-    },
-    "p135": {
-      "text": "The open house tour ended at ___.",
-      "blanks": 1,
-      "sets": [
-        "normal"
-      ],
-      "added": "2026-08-17T00:00:00+00:00"
-    },
     "p136": {
       "text": "Why the security deposit is gone: ___",
       "blanks": 1,
@@ -1187,14 +1163,6 @@
     },
     "p149": {
       "text": "The tooth fairy left ___.",
-      "blanks": 1,
-      "sets": [
-        "normal"
-      ],
-      "added": "2026-08-17T00:00:00+00:00"
-    },
-    "p150": {
-      "text": "And the award for Best Supporting Chaos goes to ___.",
       "blanks": 1,
       "sets": [
         "normal"
