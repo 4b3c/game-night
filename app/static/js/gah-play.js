@@ -103,7 +103,7 @@
       '<section class="panel panel--dead">' +
         '<h1 class="panel__title">' + GN.esc(title) + '</h1>' +
         '<p class="panel__hint">' + GN.esc(hint) + '</p>' +
-        '<a class="btn btn--big btn--go" href="' + HOME_URL + '">Back to Game Night</a>' +
+        '<a class="btn btn--big btn--go" href="' + HOME_URL + '">Back to the home page</a>' +
       '</section>'
     );
     playbar.hidden = true;
@@ -466,7 +466,7 @@
         '<h1 class="panel__title">Game already started</h1>' +
         '<p class="panel__hint">Codes only let you in before the first round. You can still watch — the spectator view never shows anyone\'s cards.</p>' +
         '<a class="btn btn--big" href="' + TV_URL + '">Watch as spectator</a>' +
-        '<a class="panel__link" href="' + HOME_URL + '">Back to Game Night</a>' +
+        '<a class="panel__link" href="' + HOME_URL + '">Back to the home page</a>' +
       '</section>'
     );
   }
@@ -743,7 +743,10 @@
         '<p class="panel__label">The prompt</p>' +
         '<p class="prompt">' + promptHtml(state.prompt) + '</p>' +
         '<h1 class="panel__title panel__title--win">' +
-          (winner ? (isYou ? '🏆 You win the round!' : '🏆 ' + esc(winner.avatar) + ' ' + esc(winner.nickname) + ' wins the round') : 'Round over') +
+          (winner
+            ? '🏆 <span class="winname">' + esc(winner.avatar) + ' ' +
+              (isYou ? 'You' : esc(winner.nickname)) + '</span> win' + (isYou ? '' : 's') + '!'
+            : 'Round over') +
         '</h1>' +
         (winner ? '<p class="panel__hint">' + winner.score + ' point' + (winner.score === 1 ? '' : 's') + ' of ' + state.options.target_score + '</p>' : '') +
         (you.is_judge

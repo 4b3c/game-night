@@ -230,6 +230,18 @@
 
 .panel__title { font-size: 1.6rem; line-height: 1.1; text-wrap: balance; }
 .panel__title--win { color: var(--gn-accent-4); }
+/* The winner's name, highlighted like a marker pen — it's the one thing on this screen
+   worth reading from the other side of the room. */
+.winname {
+  display: inline-block;
+  padding: 2px 12px 4px;
+  border: var(--gn-outline) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius-sm);
+  background: var(--gn-accent-4);
+  color: var(--gn-accent-4-ink);
+  box-shadow: var(--gn-shadow);
+  rotate: var(--gn-tilt-b);
+}
 /* `panel__code` is used two ways: as a line of text containing <b>CODE</b>, and as
    the <b> itself inside a title. Both end up with the same loud 4-letter code. */
 p.panel__code {
