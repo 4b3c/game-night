@@ -39,6 +39,7 @@
   let lastPanel = null;
   let lastStrip = null;
   let tableKey = null;
+  let tablePacking = null;   // which column each answer is in, as a string to diff
   let moreOpen = false; // the "More settings" disclosure, kept across re-renders
 
   const conn = new GN.Connection({
@@ -233,8 +234,12 @@
     GN.el('bar-code').textContent = CODE;
     GN.el('bar-round').textContent = inGame && state.round ? 'Round ' + state.round : '';
     const j = judge();
+    // Says the job as well as the name: "who is judging" is the question people ask out
+    // loud every round, and the bar should answer it without being read twice.
     GN.el('bar-judge').innerHTML = j
-      ? '<span class="crown" aria-hidden="true">👑</span>' + avatarHtml(j) + '<span class="playbar__judgename">' + esc(j.nickname) + '</span>'
+      ? '<span class="crown" aria-hidden="true">👑</span>' + avatarHtml(j) +
+        '<span class="playbar__judgename">' + esc(j.nickname) + '</span>' +
+        '<span class="playbar__judging">judging</span>'
       : '';
 
     const total = state.phase === 'PROMPT_PICK' ? state.options.prompt_seconds : state.options.submit_seconds;
@@ -272,12 +277,56 @@
   }
 
   // --- the table of submitted cards -----------------------------------------
+  /** How many columns the answers pack into. One on a phone; the CSS agrees. */
+  function columnCount() {
+    return window.matchMedia('(min-width: 620px)').matches ? 3 : 1;
+  }
+
+  /**
+   * Put each answer in the column that is currently shortest.
+   *
+   * Heights are relative, not measured: a card is as tall as its width divided by its
+   * GIF's ratio, so 1/ratio is a fine stand-in and needs no layout pass. A card whose
+   * GIF hasn't been revealed yet is face down at 4:3, and gets counted as such.
+   *
+   * Cards are *moved* into place with appendChild rather than re-created, so a GIF
+   * already on screen never reloads when the packing shifts around it.
+   */
+  function packColumns(cards) {
+    const columns = Array.prototype.slice.call(table.querySelectorAll('.tcol'));
+    const heights = columns.map(function () { return 0; });
+    const plan = [];
+    cards.forEach(function (c) {
+      const gif = c.revealed && c.gif ? c.gif : null;
+      const ratio = gif && gif.w && gif.h ? gif.w / gif.h : 4 / 3;
+      let into = 0;
+      for (let i = 1; i < heights.length; i++) {
+        if (heights[i] < heights[into] - 0.0001) into = i;
+      }
+      heights[into] += 1 / ratio;
+      plan.push(into);
+    });
+
+    // Only touch the DOM when the answer actually changed — this runs on every state
+    // broadcast, and re-appending nodes mid-flip would restart the flip animation.
+    const signature = plan.join(',') + '|' + columns.length;
+    if (signature === tablePacking) return;
+    tablePacking = signature;
+    // appendChild moves a node that already has a parent, so this both re-columns and
+    // re-orders in one pass, and leaves every <img> exactly where it was.
+    cards.forEach(function (c, i) {
+      const node = table.querySelector('.tcard[data-slot="' + c.slot + '"]');
+      if (node) columns[plan[i]].appendChild(node);
+    });
+  }
+
   function syncTable(mode) {
     const cards = (state && state.cards) || [];
     if (!cards.length) {
       table.hidden = true;
       table.innerHTML = '';
       tableKey = null;
+      tablePacking = null;
       return;
     }
     table.hidden = false;
@@ -285,26 +334,31 @@
     // answers would otherwise reuse the previous round's card elements — and since the
     // <img> is only created when one isn't already there, every phone would keep showing
     // last round's GIFs.
-    const key = state.round + '|' + cards.length + '|' + mode;
+    const key = state.round + '|' + cards.length + '|' + mode + '|' + columnCount();
     if (tableKey !== key) {
-      table.innerHTML = cards
-        .map(function (c) {
-          const tag = mode === 'view' ? 'div' : 'button';
-          const action = mode === 'flip' ? 'flip' : mode === 'pick' ? 'pick-winner' : '';
-          return (
-            '<' + tag + ' class="tcard" data-slot="' + c.slot + '"' +
-            (action ? ' data-action="' + action + '"' : '') + '>' +
-              '<span class="tcard__inner">' +
-                '<span class="tcard__back"><span class="tcard__mark">GIF</span></span>' +
-                '<span class="tcard__front"></span>' +
-              '</span>' +
-              '<span class="tcard__mine" aria-hidden="true">Yours</span>' +
-              '<span class="tcard__caption"></span>' +
-            '</' + tag + '>'
-          );
-        })
-        .join('');
+      const tag = mode === 'view' ? 'div' : 'button';
+      const action = mode === 'flip' ? 'flip' : mode === 'pick' ? 'pick-winner' : '';
+      let html = '';
+      for (let i = 0; i < columnCount(); i++) html += '<div class="tcol"></div>';
+      table.innerHTML = html;
+      const columns = table.querySelectorAll('.tcol');
+      cards.forEach(function (c, i) {
+        const node = document.createElement(tag);
+        node.className = 'tcard';
+        node.dataset.slot = c.slot;
+        if (action) node.dataset.action = action;
+        if (tag === 'button') node.type = 'button';
+        node.innerHTML =
+          '<span class="tcard__inner">' +
+            '<span class="tcard__back"><span class="tcard__mark">GIF</span></span>' +
+            '<span class="tcard__front"></span>' +
+          '</span>' +
+          '<span class="tcard__mine" aria-hidden="true">Yours</span>' +
+          '<span class="tcard__caption"></span>';
+        columns[i % columns.length].appendChild(node);
+      });
       tableKey = key;
+      tablePacking = null;
     }
     table.dataset.mode = mode;
     table.dataset.count = cards.length;
@@ -345,6 +399,8 @@
         ? avatarHtml(c.author) + '<b>' + esc(c.author.nickname) + '</b>'
         : '';
     });
+
+    packColumns(cards);
   }
 
   // --- the hand --------------------------------------------------------------
@@ -701,7 +757,7 @@
 
     return (
       '<section class="panel panel--answer">' +
-        '<p class="panel__label">' + esc(judgeName()) + ' is judging</p>' +
+        '<p class="panel__judging">' + esc(judgeName()) + ' is judging</p>' +
         '<p class="prompt prompt--big">' + promptHtml(state.prompt) + '</p>' +
         '<p class="panel__hint">Pick the funniest answer from your GIFs below.</p>' +
       '</section>'
@@ -986,6 +1042,11 @@
   document.addEventListener('change', function (event) {
     if (!event.target.matches('[data-opt]')) return;
     conn.send('set_options', { options: collectOptions() });
+  });
+
+  // Resizing across the 620px breakpoint changes how many columns the answers pack into.
+  window.addEventListener('resize', function () {
+    if (state) render();
   });
 
   document.addEventListener('input', function (event) {

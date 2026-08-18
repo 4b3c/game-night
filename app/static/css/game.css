@@ -34,9 +34,12 @@
   position: sticky;
   top: 0;
   z-index: 30;
-  display: flex;
+  /* Three tracks, not space-between: the two outer ones are equal, so whoever is judging
+     sits in the true centre of the bar however long the game code or the round number
+     gets. They are the thing you look up at mid-round, so they get the middle. */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   min-height: var(--gn-bar-h);
   padding: 8px max(14px, env(safe-area-inset-left)) 8px max(14px, env(safe-area-inset-right));
@@ -45,6 +48,7 @@
   box-shadow: 0 4px 0 rgba(0, 0, 0, .25);
 }
 .playbar__left, .playbar__right { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.playbar__right { justify-content: flex-end; }
 .playbar__code {
   font-family: var(--gn-font-display);
   font-size: 1.15rem;
@@ -69,29 +73,44 @@
 .playbar__judge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  gap: 7px;
   min-width: 0;
-  padding: 3px 10px 3px 4px;
-  border: var(--gn-outline-sm) solid var(--gn-outline-color);
+  padding: 5px 15px 5px 7px;
+  border: var(--gn-outline) solid var(--gn-outline-color);
   border-radius: var(--gn-radius-pill);
-  background: rgba(255, 213, 61, .16);
-  font-size: .9rem;
+  background: var(--gn-accent-4);
+  color: var(--gn-accent-4-ink);
+  box-shadow: var(--gn-shadow-press);
+  font-family: var(--gn-font-display);
+  font-size: 1.02rem;
+  font-weight: 800;
+  rotate: var(--gn-tilt-c);
 }
 .playbar__judge:empty { display: none; }
-.playbar__judge .avatar { width: 26px; height: 26px; font-size: .85rem; border-width: var(--gn-outline-sm); }
-.playbar__judgename { max-width: 82px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.crown { font-size: .9rem; }
+.playbar__judge .avatar { width: 32px; height: 32px; font-size: 1rem; border-width: var(--gn-outline-sm); }
+.playbar__judgename { max-width: 128px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.playbar__judging {
+  font-family: var(--gn-font-body);
+  font-size: .62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--gn-track-label);
+  opacity: .75;
+}
+.crown { font-size: 1.05rem; }
 
 .timer {
   position: relative;
   display: inline-grid;
   place-items: center;
-  width: 66px;
-  height: 32px;
+  width: 104px;
+  height: 46px;
   overflow: hidden;
-  border: var(--gn-outline) solid var(--gn-outline-color);
+  border: var(--gn-outline-lg) solid var(--gn-outline-color);
   border-radius: var(--gn-radius-pill);
   background: var(--gn-bg-well);
+  box-shadow: var(--gn-shadow-press);
 }
 .timer__fill {
   position: absolute;
@@ -103,26 +122,31 @@
 .timer__label {
   position: relative;
   font-family: var(--gn-font-display);
-  font-size: .82rem;
+  font-size: 1.35rem;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
   color: var(--gn-ink);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, .45);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, .5);
 }
 .timer--urgent .timer__fill { background: var(--gn-danger); }
 .timer--urgent { animation: pulse 620ms infinite alternate var(--gn-ease-out); }
 @keyframes pulse { to { transform: scale(1.09) rotate(-2deg); } }
 
-/* --- score strip --------------------------------------------------------- */
+/* --- the scoreboard, at the foot of the page -----------------------------
+   It used to be a strip under the top bar, taking a slice off every screen for
+   something nobody reads mid-round. It lives at the bottom now: scroll past your hand
+   and it's there. That also lets it wrap and centre instead of scrolling sideways, so
+   eight players are all visible at once rather than three and a hint of a fourth. */
 .scorestrip {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
-  overflow-x: auto;
-  padding: 10px 14px;
-  scrollbar-width: none;
-  background: rgba(0, 0, 0, .22);
-  border-bottom: var(--gn-outline-sm) solid rgba(255, 255, 255, .1);
+  margin-top: auto;
+  padding: 16px max(14px, env(safe-area-inset-left)) calc(18px + env(safe-area-inset-bottom));
+  background: rgba(0, 0, 0, .3);
+  border-top: var(--gn-outline-lg) solid var(--gn-outline-color);
 }
-.scorestrip::-webkit-scrollbar { display: none; }
 .sscore {
   flex: 0 0 auto;
   display: flex;
@@ -267,6 +291,19 @@ p.panel__code b, b.panel__code {
   font-size: .72rem;
   color: var(--gn-ink-dim);
 }
+/* "Abe is judging" — the one line on the answer screen that tells you who you are
+   trying to make laugh, so it is read at a glance rather than squinted at. */
+.panel__judging {
+  align-self: center;
+  padding: 5px 16px;
+  border: var(--gn-outline-sm) solid var(--gn-outline-color);
+  border-radius: var(--gn-radius-pill);
+  background: rgba(255, 213, 61, .16);
+  font-family: var(--gn-font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-align: center;
+}
 .panel__error {
   width: 100%;
   padding: 11px 14px;
@@ -375,11 +412,22 @@ p.panel__code b, b.panel__code {
    instead, each a fixed share of the screen at its own true shape, and you scroll. The
    grid comes back on a screen wide enough for it, down at the 620px breakpoint. */
 .table {
-  display: grid;
-  grid-template-columns: 1fr;
-  justify-items: center;
-  gap: 30px 12px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
   width: 100%;
+}
+/* One column per track, filled by gah-play.js rather than by the grid algorithm. A grid
+   makes every card in a row share the tallest one's height, which is where the white
+   bands came back from on a computer: a letterbox GIF sat in a box built for a portrait
+   one. Columns have no rows to line up, so each card is only ever as tall as itself. */
+.tcol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  min-width: 0;
 }
 
 .tcard {
@@ -936,13 +984,19 @@ button.tcard:active { transform: scale(.98); }
    which is the faster read when they all fit anyway. */
 @media (min-width: 620px) {
   .hand { grid-template-columns: repeat(2, 1fr); }
-  .table { grid-template-columns: repeat(3, 1fr); gap: 26px 12px; }
-  .table[data-count="1"] { grid-template-columns: 1fr; }
-  .table[data-count="2"], .table[data-count="4"] { grid-template-columns: repeat(2, 1fr); }
-  /* Once the round is decided the table is a recap, not a control — shrink it so the
-     result panel stays the thing you're looking at. */
-  .stage:has(.panel--result) .table,
-  .stage:has(.panel--over) .table { grid-template-columns: repeat(3, 1fr); gap: 22px 10px; }
+  /* 80% of the window, split three ways. Answers pack into whichever column is
+     shortest, so seven of them sit snugly instead of leaving ragged white gaps.
+     The stage is a 720px reading column, and the answers are the one thing that should
+     be wider than that — hence the negative margins, which break the table out of it
+     and centre it on the window instead. */
+  .table {
+    width: 80vw;
+    max-width: 80vw;
+    margin-left: calc(50% - 40vw);
+    margin-right: calc(50% - 40vw);
+    gap: 14px;
+  }
+  .tcol { flex: 1 1 0; gap: 18px; }
   .tcard { width: 100%; }
   .panel { padding: 30px 26px 26px; }
   .panel__title { font-size: 2rem; }

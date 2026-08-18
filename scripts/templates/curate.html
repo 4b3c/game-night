@@ -20,12 +20,17 @@
       text-transform: uppercase; letter-spacing: var(--gn-track-label); color: var(--gn-ink-dim);
     }
     .tally { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+    /* A column, so the meter can sit under the label — which means every child is its
+       own line. The label and its count therefore have to be ONE child: loose text runs
+       next to a <b> each became a flex item of their own and stacked, ballooning the
+       pill into a circle. */
     .pill {
       display: inline-flex; flex-direction: column; gap: 3px; overflow: hidden;
       padding: 5px 11px 6px; border: var(--gn-outline-sm) solid var(--gn-outline-color);
       border-radius: var(--gn-radius-pill); background: var(--gn-bg-2);
       font-size: .78rem; font-weight: 800; white-space: nowrap;
     }
+    .pill__text { display: block; }
     .pill b { font-family: var(--gn-font-display); }
     .pill--normal { background: var(--gn-accent-3); color: var(--gn-accent-3-ink); }
     .pill--adult { background: var(--gn-accent-2); color: var(--gn-accent-2-ink); }
@@ -288,10 +293,13 @@
     const normal = counts.sets.normal || 0;
     const meter = '<span class="meter"><i style="width:' +
       Math.min(100, Math.round(100 * normal / counts.target)) + '%"></i></span>';
+    const pill = (kind, label, inner) =>
+      '<span class="pill' + (kind ? ' pill--' + kind : '') + '">' +
+        '<span class="pill__text">' + label + '</span>' + inner + '</span>';
     tally.innerHTML =
-      '<span class="pill pill--normal">normal <b>' + normal + '</b>/' + counts.target + meter + '</span>' +
-      '<span class="pill pill--adult">18+ <b>' + (counts.sets.adult || 0) + '</b></span>' +
-      '<span class="pill">rejected <b>' + (counts.ignored || 0) + '</b></span>';
+      pill('normal', 'normal <b>' + normal + '</b>/' + counts.target, meter) +
+      pill('adult', '18+ <b>' + (counts.sets.adult || 0) + '</b>', '') +
+      pill('', 'rejected <b>' + (counts.ignored || 0) + '</b>', '');
   }
 
   // --- tabs ---------------------------------------------------------------
