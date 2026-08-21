@@ -231,3 +231,22 @@ def test_starting_with_no_prompts_in_this_deck_says_so(deck, monkeypatch):
     game.set_options("p0", {"clean": False})
     game.start_game("p0")
     assert game.phase is not E.Phase.LOBBY
+
+
+# --- what a finished round writes back ---------------------------------------
+def test_record_round_counts_the_prompt_it_was_played_on(state):
+    """A prompt's score is rounds played on it, written by the game, same as a card's."""
+    store.record_round([], None, "p001")
+    store.record_round([], None, "p001")
+    store.record_round([], None, "p002")
+
+    rows = store.prompts()
+    assert rows["p001"]["uses"] == 2
+    assert rows["p002"]["uses"] == 1
+    assert "uses" not in rows["p003"], "a prompt nobody played should stay untouched"
+
+
+def test_record_round_survives_a_prompt_deleted_mid_round(state):
+    """Deleting a prompt while it is on the table must not cost the cards their round."""
+    store.record_round([], None, "p404")
+    assert "p404" not in store.prompts()

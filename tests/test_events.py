@@ -315,3 +315,25 @@ def test_the_host_role_moves_on_if_the_host_leaves_the_lobby(app):
     second.pump()
     assert second.state["host_pid"] == second.you["pid"]
     assert second.you["is_host"] is True
+
+
+# --- the stats gate ----------------------------------------------------------
+def test_rounds_are_only_recorded_when_the_deployment_says_so(monkeypatch):
+    """`GN_RECORD_STATS` is what makes the deployed server the only game that counts.
+
+    Off by default, so a laptop, the bot scripts and this test suite all leave the deck's
+    record of how it plays alone.
+    """
+    from app.games.gah import rooms as room_store
+    import curation_store
+
+    calls = []
+    monkeypatch.setattr(curation_store, "record_played_ids", lambda *args: calls.append(args))
+
+    monkeypatch.setattr(room_store, "RECORD_STATS", False)
+    room_store._record_round(["gif-a"], "gif-a", "p001")
+    assert calls == []
+
+    monkeypatch.setattr(room_store, "RECORD_STATS", True)
+    room_store._record_round(["gif-a"], "gif-a", "p001")
+    assert calls == [(["gif-a"], "gif-a", "p001")]

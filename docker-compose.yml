@@ -27,6 +27,11 @@ services:
       GN_COOKIE_SECURE: ${GN_COOKIE_SECURE:-0}
       # Seconds a room survives after the last person leaves.
       GN_ROOM_IDLE_TIMEOUT: ${GN_ROOM_IDLE_TIMEOUT:-600}
+      # Count finished rounds in curation/ — which card was played, which won, and which
+      # prompt they answered. On here and nowhere else on purpose: the deck's statistics
+      # should come from real games on the real server, not from a laptop or a bot script
+      # (and test-mode games are skipped even here — see engine.py).
+      GN_RECORD_STATS: ${GN_RECORD_STATS:-1}
 
     # Localhost only: the proxy reaches it, the internet does not.
     ports:

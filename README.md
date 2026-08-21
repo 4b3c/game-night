@@ -155,15 +155,22 @@ three small JSON files in `curation/`, and they are the whole state of the deck:
 |---|---|
 | `library.json` | every card in the game: the link it came from, its sets, its size, and how often it has been **played** and **won** |
 | `ignored.json` | cards you rejected with ✕ — read only by search, so they stop coming back |
-| `prompts.json` | every prompt, its text, and the pile it's in (`source` says who wrote it — see [LICENSE-PROMPTS.md](LICENSE-PROMPTS.md)) |
+| `prompts.json` | every prompt, its text, the pile it's in, and how often it has been **played** (`source` says who wrote it — see [LICENSE-PROMPTS.md](LICENSE-PROMPTS.md)) |
 
 Each stamps when an entry joined the list it's in. That's a few tens of KB of text that
 diffs cleanly, versus ~70 MB of binaries that would sit in the history forever and make
 the repo heavy for anyone who clones it.
 
 `uses` and `wins` are written by the **game**, at the end of each round: every card played
-gets a use, the winner also gets a win. So `wins / uses` is a real measure of whether a
-card is funny, earned at the table rather than guessed at when it was tagged.
+gets a use, the winner also gets a win, and the prompt they were answering gets a use of
+its own. So `wins / uses` is a real measure of whether a card is funny, and a prompt's
+`uses` is a real measure of whether judges reach for it — earned at the table rather than
+guessed at when it was tagged.
+
+Only the deployed server keeps score. Recording is off unless `GN_RECORD_STATS=1`, which
+`docker-compose.yml` sets and a laptop doesn't, so `python run.py`, the bot scripts and
+the tests all leave the record alone. Test-mode games — the two-player ones you start to
+try something out — are never counted, on any machine.
 
 ```bash
 python scripts/rehydrate_gifs.py            # rebuild app/static/gifs/ from library.json

@@ -754,3 +754,51 @@ def test_public_state_never_contains_a_hand():
     for player in game.players.values():
         for card in player.hand:
             assert card not in blob
+
+
+# --- what a finished round reports back --------------------------------------
+def recorder() -> tuple[list[tuple], object]:
+    """A stand-in for the curation store: collects (played, winner, prompt) calls."""
+    calls: list[tuple] = []
+
+    def record(played, winner, prompt_id):
+        calls.append((list(played), winner, prompt_id))
+
+    return calls, record
+
+
+def test_round_award_reports_cards_and_prompt():
+    calls, record = recorder()
+    clock = Clock()
+    game = Game(code="TEST", host_pid="p0", rng=random.Random(7), now=clock, on_round_awarded=record)
+    for i in range(4):
+        game.add_player(f"p{i}", NAMES[i])
+    game.start_game("p0")
+
+    judge = game.judge_pid
+    game.judge_ready(judge)
+    prompt_id = game.prompt_choice_ids[0]
+    game.pick_prompt(judge, prompt_id)
+    for player in submitters(game):
+        game.submit_card(player.pid, player.hand[0])
+    for slot in range(len(game.submissions)):
+        game.flip(judge, slot)
+    played = [s.gif_id for s in game.submissions]
+    winner_gif = game.submissions[1].gif_id
+    game.pick_winner(judge, 1)
+
+    assert calls == [(played, winner_gif, prompt_id)]
+
+
+def test_test_mode_games_are_not_recorded():
+    """Two-player games exist to try things out; they must not edit the deck's record."""
+    calls, record = recorder()
+    clock = Clock()
+    game = Game(code="TEST", host_pid="p0", rng=random.Random(7), now=clock, on_round_awarded=record)
+    for i in range(2):
+        game.add_player(f"p{i}", NAMES[i])
+    game.set_options("p0", {"test_mode": True})
+    game.start_game("p0")
+    play_round(game)
+
+    assert calls == []

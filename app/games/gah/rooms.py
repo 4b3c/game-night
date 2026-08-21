@@ -9,6 +9,7 @@ Swapping this for Redis later means reimplementing this class, not touching the 
 
 from __future__ import annotations
 
+import os
 import random
 import string
 import threading
@@ -22,17 +23,26 @@ CODE_LENGTH = 4
 DEFAULT_IDLE_TIMEOUT = 600  # 10 minutes
 
 
-def _record_round(played: list[str], winner: str) -> None:
-    """Tell the curation library which cards were played, and which one won.
+#: Whether finished rounds are written back to curation/. Off unless something says
+#: otherwise, so a laptop running `python run.py` — or a test suite, or the bot scripts —
+#: never edits the deck's record of how it plays. docker-compose.yml turns it on, which
+#: makes "the deployed container" the definition of a game that counts.
+RECORD_STATS = os.environ.get("GN_RECORD_STATS", "0").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _record_round(played: list[str], winner: str, prompt_id: str | None = None) -> None:
+    """Tell the curation library which cards were played, which won, and on what prompt.
 
     This is where the game stops being pure — deliberately at the edge, in the thing that
     builds games, rather than inside the engine. Imported lazily and failure-tolerant: a
     read-only or absent curation folder must cost a round of statistics, never the game.
     """
+    if not RECORD_STATS:
+        return
     try:
         import curation_store
 
-        curation_store.record_played_ids(played, winner)
+        curation_store.record_played_ids(played, winner, prompt_id)
     except Exception as exc:  # noqa: BLE001
         print(f"[gah] round stats not recorded: {exc}")
 

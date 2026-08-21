@@ -620,6 +620,8 @@ def prompt_rows() -> list[dict]:
             "sets": [s for s in (row.get("sets") or []) if s in SETS],
             "blanks": int(row.get("blanks", 1)),
             "added": row.get("added"),
+            # Rounds played on it, written by the game exactly like a card's uses.
+            "uses": int(row.get("uses", 0)),
         }
         for prompt_id, row in sorted(store.prompts().items())
     ]

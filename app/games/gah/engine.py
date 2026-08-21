@@ -170,16 +170,16 @@ class Game:
         *,
         rng: random.Random | None = None,
         now: Callable[[], float] = time.time,
-        on_round_awarded: Callable[[list[str], str], None] | None = None,
+        on_round_awarded: Callable[[list[str], str, str | None], None] | None = None,
     ):
         self.code = code
         self.host_pid = host_pid
         self.options = Options()
         self._rng = rng or random.Random()
         self._now = now
-        # Told (cards played, winning card) once a round is decided. Defaults to doing
-        # nothing, which is what keeps this module free of I/O and the tests hermetic —
-        # the composition root supplies the real recorder.
+        # Told (cards played, winning card, the round's prompt) once a round is decided.
+        # Defaults to doing nothing, which is what keeps this module free of I/O and the
+        # tests hermetic — the composition root supplies the real recorder.
         self._on_round_awarded = on_round_awarded
 
         self.version = 0
@@ -495,11 +495,17 @@ class Game:
         self._gif_deck.discard(*played)
 
         # A finished round is the only honest place to count a card as played: it covers
-        # timer auto-plays, and a round abandoned halfway inflates nothing. Bookkeeping
-        # must never be able to spoil a game, hence the swallow.
-        if self._on_round_awarded is not None:
+        # timer auto-plays, and a round abandoned halfway inflates nothing. The prompt
+        # rides along on the same call, so a prompt's tally and its cards' tallies can
+        # never disagree about how many rounds were played.
+        #
+        # Test mode is excluded on purpose. It exists so two people can start a game to
+        # try something out, and a deck's statistics should be a record of real games at
+        # a real table -- not of the developer restarting the same round nine times.
+        # Bookkeeping must never be able to spoil a game, hence the swallow.
+        if self._on_round_awarded is not None and not self.options.test_mode:
             try:
-                self._on_round_awarded(played, submission.gif_id)
+                self._on_round_awarded(played, submission.gif_id, self.prompt_id)
             except Exception as exc:  # noqa: BLE001
                 print(f"[gah] could not record round stats: {exc}")
 

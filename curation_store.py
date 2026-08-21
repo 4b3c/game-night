@@ -18,7 +18,9 @@ so `wins / uses` is a real answer to "is this card funny", earned at the table r
 than guessed at by whoever tagged it.
 
 A prompt records its text and the same `sets` a card has, because a mode is a pairing:
-18+ deals 18+ GIFs against 18+ prompts. Prompts used to live in app/data/prompts.json and
+18+ deals 18+ GIFs against 18+ prompts. It keeps a `uses` of its own -- rounds actually
+played on it -- so "which prompts do judges reach for" is answered the same way "is this
+card funny" is: by the table, not by whoever wrote it. Prompts used to live in app/data/prompts.json and
 travel only in git, which meant editing one was a commit-pull-rebuild — they are here now
 so the curator can write them while the game is running, exactly like cards.
 
@@ -223,12 +225,17 @@ def drop_prompt(prompt_id: str) -> bool:
 
 
 # --- what the game reports back ---------------------------------------------------
-def record_round(used: list[str], winner: str | None) -> None:
-    """One completed round: every card played gets a use, the winner also gets a win.
+def record_round(used: list[str], winner: str | None, prompt_id: str | None = None) -> None:
+    """One completed round: every card played gets a use, the winner also gets a win,
+    and the prompt they were answering gets a use of its own.
 
     Counted at the end of a round rather than at submit time, so an abandoned round
     doesn't inflate anything. Cards no longer in the library (retagged away mid-game)
-    are skipped rather than resurrected.
+    are skipped rather than resurrected, and so is a prompt deleted mid-round.
+
+    Two files, so two writes and two locks. The prompt half goes second and is allowed to
+    fail on its own: a prompt that has been deleted while it was on the table should not
+    cost the cards their round.
     """
     def change(cards: dict) -> None:
         for source_id in used:
@@ -239,6 +246,22 @@ def record_round(used: list[str], winner: str | None) -> None:
             cards[winner]["wins"] = int(cards[winner].get("wins", 0)) + 1
 
     update_library(change)
+    if prompt_id:
+        record_prompt_use(prompt_id)
+
+
+def record_prompt_use(prompt_id: str) -> None:
+    """One round played on this prompt.
+
+    A prompt has no wins to record -- only the judge's card wins -- so `uses` is the
+    whole score: how many times it made it out of the three on offer and onto the table.
+    """
+    def change(rows: dict) -> None:
+        row = rows.get(prompt_id)
+        if row is not None:
+            row["uses"] = int(row.get("uses", 0)) + 1
+
+    update_prompts(change)
 
 
 def by_card_id() -> dict[str, str]:
@@ -250,7 +273,11 @@ def by_card_id() -> dict[str, str]:
     return {Path(c["file"]).stem: sid for sid, c in library().items() if c.get("file")}
 
 
-def record_played_ids(played: list[str], winner: str | None) -> None:
-    """Same as record_round, but in the game's vocabulary of card ids."""
+def record_played_ids(played: list[str], winner: str | None, prompt_id: str | None = None) -> None:
+    """Same as record_round, but in the game's vocabulary of card ids.
+
+    Prompts need no translation: the id the game deals is the key the file is written
+    under, because prompts never had a second identity the way a GIF has a filename.
+    """
     index = by_card_id()
-    record_round([index[i] for i in played if i in index], index.get(winner or ""))
+    record_round([index[i] for i in played if i in index], index.get(winner or ""), prompt_id)
