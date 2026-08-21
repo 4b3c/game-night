@@ -531,10 +531,13 @@ button.tcard:active { transform: scale(.98); }
   letter-spacing: .1em;
   transform: rotate(-6deg);
 }
-.tcard__front { transform: rotateY(180deg); background: var(--gn-gif-mat); }
+/* Ink behind the card, mat behind the picture. `contain` letterboxes a GIF whose box
+   isn't quite its own shape, and a white card behind that showed as a pale line along
+   the edge; the mat still lands behind the picture itself, which is all it is for. */
+.tcard__front { transform: rotateY(180deg); background: var(--gn-outline-color); }
 /* `contain`, not `cover`: with the card already at the GIF's ratio these are the same
    thing, but if a manifest has no dimensions it letterboxes rather than crops. */
-.tcard__img { width: 100%; height: 100%; object-fit: contain; }
+.tcard__img { width: 100%; height: 100%; object-fit: contain; background: var(--gn-gif-mat); }
 .tcard__caption {
   position: absolute;
   left: 50%;
@@ -924,13 +927,17 @@ button.tcard:active { transform: scale(.98); }
      tall ones and the sides off the wide ones. Width is the only thing fixed. */
   padding: 0;
   overflow: hidden;
-  border: var(--gn-outline) solid var(--gn-outline-color);
+  /* An outline drawn inwards, not a border -- the same trick .tcard uses, for the same
+     reason. A border sits *beside* the picture, and the card is tilted, so the seam
+     between the two lands on a fraction of a device pixel and gets painted as a blend:
+     a pale hairline, broken up along the tilt into what reads as a dashed edge. An
+     outline with a negative offset paints *over* the picture's outer edge instead, so
+     there is no seam left to blend. */
+  outline: var(--gn-outline) solid var(--gn-outline-color);
+  outline-offset: calc(-1 * var(--gn-outline));
   border-radius: var(--gn-radius-sm);
-  /* Ink, not the mat. The card is tilted, so its edges land on fractions of a device
-     pixel and the seam pixel between the border and the picture is a blend of the two --
-     with a white mat behind that came out as a pale hairline broken up round every card.
-     The mat moves onto the picture itself (see .gifcard__img), which is the only thing
-     that ever needed it. */
+  /* Ink behind the card, mat behind the picture (see .gifcard__img) -- so even where a
+     GIF doesn't quite fill its box, what shows is ink, not white. */
   background: var(--gn-outline-color);
   box-shadow: var(--gn-shadow);
   cursor: pointer;
