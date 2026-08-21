@@ -82,10 +82,11 @@ and timing as a CSS custom property. Change a value, reload. No build step, no n
 `curation/prompts.json` directly: one entry per prompt, keyed by id, with `sets` naming
 the pile it's in and `___` marking a blank if the prompt has one.
 
-The deck that ships is 100 original prompts, 50 in each pile, and they're headlines
-rather than fill-in-the-blanks — *"What the Ring camera picked up:"*, *"My Roman
-Empire:"* — because the answer is a picture, and a picture reads better under a caption
-than jammed into the middle of a sentence.
+The deck that ships is 100 original prompts, 50 in each pile, and they're flat
+statements rather than fill-in-the-blanks — *"Happy birthday"*, *"I caught a deadly
+disease"*, *"My grandma told all her friends about me"*. Most GIFs worth playing are
+reactions, so the prompt's job is to be the thing reacted to: state a situation, leave it
+vague, and let seven people answer it with a face.
 
 The real **Cards Against Humanity** black cards are a supported import rather than part
 of the deck: CAH release their own game under CC BY-NC-SA 4.0, the terms that come with

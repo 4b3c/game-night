@@ -124,9 +124,11 @@ exist. Read `git log` before writing one.
 ## Prompts and licensing
 
 The shipped deck is 100 original prompts (`source: "original"`), 50 normal and 50 18+,
-written as headlines that end in a colon rather than sentences with a `___` in them — the
-answer is a GIF, so it sits under a caption. `blanks: 0` is normal here; the engine still
-counts blanks from the text, so a `___` prompt keeps working.
+written as plain statements — no `___`, no trailing punctuation, no question marks. The
+GIFs are overwhelmingly reaction GIFs, so a prompt has to be something to react *to*
+("I'm pregnant", "The wifi is out"), stated vaguely enough that half a dozen different
+faces are all funny answers. `blanks: 0` is normal here; the engine still counts blanks
+from the text, so a `___` prompt keeps working if you write one.
 
 Real Cards Against Humanity black cards are an import, not part of the deck:
 `scripts/import_cah_prompts.py` pulls them into the 18+ pile under CC BY-NC-SA 4.0. If you
