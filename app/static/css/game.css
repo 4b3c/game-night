@@ -36,9 +36,16 @@
   z-index: 30;
   /* Three tracks, not space-between: the two outer ones are equal, so whoever is judging
      sits in the true centre of the bar however long the game code or the round number
-     gets. They are the thing you look up at mid-round, so they get the middle. */
+     gets. They are the thing you look up at mid-round, so they get the middle.
+
+     The floors are what stop them fighting. With a plain `1fr auto 1fr`, a twelve-letter
+     nickname makes the middle track wider than the bar and the pill is simply drawn on
+     top of the code and the round number. The middle is the one that can give: a floor
+     of 0 lets it shrink and the name ellipsises. The outer two hold at their content, so
+     the timer — which must stay readable at arm's length — is never the thing squeezed
+     out to make room for somebody's name. */
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);
   align-items: center;
   gap: 10px;
   min-height: var(--gn-bar-h);
@@ -88,8 +95,25 @@
   rotate: var(--gn-tilt-c);
 }
 .playbar__judge:empty { display: none; }
+/* Stay inside the track. Paired with the ellipsis on the name below, a nickname that
+   doesn't fit gets shortened rather than pushing the pill over the bar's other two. */
+.playbar__judge { max-width: 100%; overflow: hidden; }
 .playbar__judge .avatar { width: 32px; height: 32px; font-size: 1rem; border-width: var(--gn-outline-sm); }
 .playbar__judgename { max-width: 128px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The code, the timer and a name fill a 390px bar on their own, so on a phone the pill
+   sheds what it can spare rather than growing into its neighbours: the round number
+   steps aside while it's up, and the word the crown already says goes with it. */
+@media (max-width: 619px) {
+  .playbar--judge .playbar__round,
+  .playbar--judge .playbar__judging { display: none; }
+  .playbar--judge .playbar__judgename { max-width: 92px; }
+  .playbar--judge .playbar__judge { padding-right: 11px; }
+  /* And an explicit ceiling, because a grid's middle track claims its content's width
+     before the outer two get anything: the code (64px) and the timer (104px) would be
+     the ones pushed aside, and the timer is not allowed to shrink. What's left after
+     those, 14px of padding either side and two 10px gaps, is the pill's. */
+  .playbar--judge .playbar__judge { max-width: calc(100vw - 216px); }
+}
 .playbar__judging {
   font-family: var(--gn-font-body);
   font-size: .62rem;
@@ -104,6 +128,9 @@
   position: relative;
   display: inline-grid;
   place-items: center;
+  /* Never shrinks. It is the number people shout about, and it is sized to be read at
+     arm's length — a long nickname beside it has to give up its own width instead. */
+  flex: none;
   width: 104px;
   height: 46px;
   overflow: hidden;
@@ -465,6 +492,15 @@ button.tcard:active { transform: scale(.98); }
   transition: transform var(--gn-flip-ms) var(--gn-ease);
 }
 .tcard--up .tcard__inner { transform: rotateY(180deg); }
+/* An outline drawn inwards, not a border, and that is the whole reason the white mat
+   stopped showing as bands down the sides of a landscape GIF.
+
+   The card carries the GIF's aspect ratio, but a border sits *inside* that box: it took
+   3px off each edge, so the picture's box came out at a slightly different shape than
+   the picture — 1.80 against 1.78 on a 356x200 card — and `object-fit: contain` did what
+   it is supposed to and letterboxed the difference against the mat. An outline paints in
+   the same place and takes no space at all, so the picture's box is the card's box and
+   there is nothing left over to letterbox. */
 .tcard__back, .tcard__front {
   position: absolute;
   inset: 0;
@@ -472,7 +508,8 @@ button.tcard:active { transform: scale(.98); }
   place-items: center;
   overflow: hidden;
   backface-visibility: hidden;
-  border: var(--gn-outline) solid var(--gn-outline-color);
+  outline: var(--gn-outline) solid var(--gn-outline-color);
+  outline-offset: calc(-1 * var(--gn-outline));
   border-radius: var(--gn-radius-sm);
   box-shadow: var(--gn-shadow);
 }
@@ -984,8 +1021,10 @@ button.tcard:active { transform: scale(.98); }
    which is the faster read when they all fit anyway. */
 @media (min-width: 620px) {
   .hand { grid-template-columns: repeat(2, 1fr); }
-  /* 80% of the window, split three ways. Answers pack into whichever column is
-     shortest, so seven of them sit snugly instead of leaving ragged white gaps.
+  /* 80% of the window, split evenly — three ways here, four on a screen wide enough
+     (gah-play.js decides, and never makes more columns than there are answers).
+     Answers pack into whichever column is shortest, so seven of them sit snugly
+     instead of leaving ragged white gaps.
      The stage is a 720px reading column, and the answers are the one thing that should
      be wider than that — hence the negative margins, which break the table out of it
      and centre it on the window instead. */

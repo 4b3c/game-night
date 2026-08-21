@@ -236,11 +236,19 @@
     const j = judge();
     // Says the job as well as the name: "who is judging" is the question people ask out
     // loud every round, and the bar should answer it without being read twice.
-    GN.el('bar-judge').innerHTML = j
+    //
+    // Never to the judge, though. They already know — every screen they get says so in
+    // bigger letters — and on a phone the pill is wide enough to sit on top of the round
+    // number next to it. Telling someone their own name is what made the bar ugly.
+    const yourself = me();
+    const showJudge = !!j && !(yourself && yourself.is_judge);
+    GN.el('bar-judge').innerHTML = showJudge
       ? '<span class="crown" aria-hidden="true">👑</span>' + avatarHtml(j) +
         '<span class="playbar__judgename">' + esc(j.nickname) + '</span>' +
         '<span class="playbar__judging">judging</span>'
       : '';
+    // A phone gives up the round number while this pill is up — see game.css.
+    playbar.classList.toggle('playbar--judge', showJudge);
 
     const total = state.phase === 'PROMPT_PICK' ? state.options.prompt_seconds : state.options.submit_seconds;
     countdown.set(state.deadline_ts, total);
@@ -277,9 +285,21 @@
   }
 
   // --- the table of submitted cards -----------------------------------------
-  /** How many columns the answers pack into. One on a phone; the CSS agrees. */
-  function columnCount() {
-    return window.matchMedia('(min-width: 620px)').matches ? 3 : 1;
+  /**
+   * How many columns the answers pack into. One on a phone; the CSS agrees.
+   *
+   * Four on a computer, where seven answers in three columns ran off the bottom of the
+   * window. Only above 1100px: at the 620px breakpoint a quarter of the table is 124px,
+   * which is the same too-small-to-judge card the phone breakpoint exists to avoid.
+   *
+   * Never more columns than there are answers. Columns share the table's width evenly,
+   * so a four-player round — three answers — would otherwise leave a dead quarter of
+   * the screen on the right and make the cards narrower for nothing.
+   */
+  function columnCount(count) {
+    if (!window.matchMedia('(min-width: 620px)').matches) return 1;
+    const most = window.matchMedia('(min-width: 1100px)').matches ? 4 : 3;
+    return Math.max(1, Math.min(count || 1, most));
   }
 
   /**
@@ -334,14 +354,15 @@
     // answers would otherwise reuse the previous round's card elements — and since the
     // <img> is only created when one isn't already there, every phone would keep showing
     // last round's GIFs.
-    const key = state.round + '|' + cards.length + '|' + mode + '|' + columnCount();
+    const columns = columnCount(cards.length);
+    const key = state.round + '|' + cards.length + '|' + mode + '|' + columns;
     if (tableKey !== key) {
       const tag = mode === 'view' ? 'div' : 'button';
       const action = mode === 'flip' ? 'flip' : mode === 'pick' ? 'pick-winner' : '';
       let html = '';
-      for (let i = 0; i < columnCount(); i++) html += '<div class="tcol"></div>';
+      for (let i = 0; i < columns; i++) html += '<div class="tcol"></div>';
       table.innerHTML = html;
-      const columns = table.querySelectorAll('.tcol');
+      const cols = table.querySelectorAll('.tcol');
       cards.forEach(function (c, i) {
         const node = document.createElement(tag);
         node.className = 'tcard';
@@ -355,7 +376,7 @@
           '</span>' +
           '<span class="tcard__mine" aria-hidden="true">Yours</span>' +
           '<span class="tcard__caption"></span>';
-        columns[i % columns.length].appendChild(node);
+        cols[i % cols.length].appendChild(node);
       });
       tableKey = key;
       tablePacking = null;
@@ -1044,7 +1065,8 @@
     conn.send('set_options', { options: collectOptions() });
   });
 
-  // Resizing across the 620px breakpoint changes how many columns the answers pack into.
+  // Resizing across the 620px or 1100px breakpoint changes how many columns the answers
+  // pack into.
   window.addEventListener('resize', function () {
     if (state) render();
   });
