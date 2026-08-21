@@ -802,3 +802,32 @@ def test_test_mode_games_are_not_recorded():
     play_round(game)
 
     assert calls == []
+
+
+# --- a table of one ----------------------------------------------------------
+def test_test_mode_lets_one_player_start():
+    """Test mode goes down to one, so you can start a game and walk the screens alone."""
+    game, _ = make_game(1, test_mode=True)
+    game.start_game("p0")
+    assert game.phase is Phase.ROUND_READY
+    assert game.judge_pid == "p0"
+
+
+def test_a_round_nobody_answered_ends_with_no_winner():
+    """Alone at the table -- or last one standing -- the judge must not be parked in
+    front of an empty reveal with no way forward."""
+    calls, record = recorder()
+    game = Game(code="TEST", host_pid="p0", rng=random.Random(3), now=Clock(), on_round_awarded=record)
+    game.add_player("p0", NAMES[0])
+    game.set_options("p0", {"test_mode": True})
+    game.start_game("p0")
+
+    game.judge_ready("p0")
+    game.pick_prompt("p0", game.prompt_choice_ids[0])
+
+    assert game.phase is Phase.ROUND_RESULT
+    assert game.round_winner_pid is None and game.round_winner_slot is None
+    assert calls == [], "an unanswered round has no cards to count"
+
+    game.next_round("p0")
+    assert game.phase is Phase.ROUND_READY

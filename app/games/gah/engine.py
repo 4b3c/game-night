@@ -32,7 +32,10 @@ from .decks import (
 HAND_SIZE = 7
 PROMPT_CHOICES = 3
 MIN_PLAYERS = 4
-TEST_MIN_PLAYERS = 2
+# Test mode goes all the way down to one, so you can start a game and walk the screens
+# on your own. A table of one has nobody to answer the judge, so those rounds end
+# unanswered -- see _end_empty_round.
+TEST_MIN_PLAYERS = 1
 MAX_PLAYERS = 8
 
 DEFAULT_TARGET_SCORE = 5
@@ -87,7 +90,7 @@ class Options:
     target_score: int = DEFAULT_TARGET_SCORE
     prompt_seconds: int = DEFAULT_PROMPT_SECONDS  # 0 = no timer
     submit_seconds: int = DEFAULT_SUBMIT_SECONDS  # 0 = no timer
-    test_mode: bool = False  # allow starting with 2 players
+    test_mode: bool = False  # start below the usual four, down to one
 
     @property
     def min_players(self) -> int:
@@ -418,6 +421,10 @@ class Game:
         self.phase = Phase.SUBMIT
         self._set_deadline(self.options.submit_seconds)
         self._touch()
+        # A table with nobody to answer -- one player in test mode -- would otherwise sit
+        # on an answer timer waiting for a submission that cannot come, until the ticker
+        # noticed. Settle it here instead, in the same action.
+        self._maybe_close_submissions()
 
     def submit_card(self, pid: str, gif_id: str) -> None:
         player = self._player(pid)
@@ -444,8 +451,26 @@ class Game:
             return False
         if len(self.submissions) < len(self._non_judge_players()):
             return False
+        if not self.submissions:
+            self._end_empty_round()
+            return True
         self._start_reveal()
         return True
+
+    def _end_empty_round(self) -> None:
+        """Nobody answered, so there is nothing to reveal and nothing to judge.
+
+        Two ways to get here. A table of one -- test mode starts that low so you can walk
+        the screens on your own -- and a round where everyone but the judge left before
+        answering. Either way the round ends with no winner, rather than parking the judge
+        in front of an empty table with no way forward. Nothing is recorded either: no
+        cards were played, so there is nothing about the deck to learn.
+        """
+        self.round_winner_pid = None
+        self.round_winner_slot = None
+        self.phase = Phase.ROUND_RESULT
+        self.deadline = None
+        self._touch()
 
     def _start_reveal(self) -> None:
         # Shuffle now, so slot order says nothing about who submitted when.

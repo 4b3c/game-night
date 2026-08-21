@@ -41,7 +41,7 @@
   let tableKey = null;
   let tablePacking = null;   // which column each answer is in, as a string to diff
   let handPacking = null;    // the same, for your own hand
-  let moreOpen = false; // the "More settings" disclosure, kept across re-renders
+  let settingsOpen = false; // the Settings disclosure, kept across re-renders
 
   const conn = new GN.Connection({
     joinPayload: function () {
@@ -616,17 +616,16 @@
     );
   }
 
-  /** The line under the switch. What the switch does, not how big the deck is — nobody
-   *  sitting down to play needs a card count. */
-  function deckLine(d) {
-    return d.clean ? '18+ cards and prompts stay out' : '18+ cards and prompts are in';
-  }
-
-  /** The one decision that matters, up front: is the 18+ pile in or out?
+  /** Is the 18+ pile in or out?
    *
    *  A switch rather than a set of modes, because there is only one deck: clean is that
    *  deck, and turning this off mixes the 18+ pile in on top. Default on, so nobody has
-   *  to think about it before handing a phone to whoever is in the room.
+   *  to think about it before handing a phone to whoever is in the room — which is also
+   *  why it can live in the settings rather than on the lobby's front page: the answer
+   *  is already right for the room you'd hand a phone to.
+   *
+   *  Four words and no caption. "Keep it clean" says the whole thing; a line explaining
+   *  that 18+ cards stay out was explaining the same words back to you.
    */
   function deckSwitchHtml(editable) {
     const d = state.deck;
@@ -638,16 +637,22 @@
     return (
       '<label class="switchline">' +
         '<input type="checkbox" data-opt="clean"' + (d.clean ? ' checked' : '') + '>' +
-        '<span class="switchline__text">' +
-          '<b>Keep it clean</b>' +
-          '<small>' + esc(deckLine(d)) + '</small>' +
-        '</span>' +
-      '</label>' +
-      (d.ready ? '' : '<p class="panel__warn">' + esc(d.why) + '</p>')
+        '<span class="switchline__text"><b>Keep it clean</b></span>' +
+      '</label>'
     );
   }
 
-  function moreSettingsHtml() {
+  /** Why the deck can't be dealt, if it can't.
+   *
+   *  Rendered outside the settings, next to Start: the switch that causes it is behind a
+   *  disclosure now, and a warning you have to open a panel to find is not a warning.
+   */
+  function deckWarnHtml() {
+    const d = state.deck;
+    return !d || d.ready ? '' : '<p class="panel__warn">' + esc(d.why) + '</p>';
+  }
+
+  function settingsHtml() {
     const o = state.options;
     const timerOpts = function (values, current) {
       return values
@@ -658,11 +663,13 @@
         .join('');
     };
     return (
-      '<div class="more">' +
-        '<button class="more__toggle" data-action="toggle-more" aria-expanded="' + (moreOpen ? 'true' : 'false') + '" type="button">' +
-          '⚙︎ More settings' +
+      '<div class="settings">' +
+        '<button class="settings__toggle" data-action="toggle-settings" aria-expanded="' + (settingsOpen ? 'true' : 'false') + '" type="button">' +
+          '⚙︎ Settings' +
         '</button>' +
-        '<div class="more__body options"' + (moreOpen ? '' : ' hidden') + '>' +
+        '<div class="settings__body options"' + (settingsOpen ? '' : ' hidden') + '>' +
+          // The deck switch leads, because it is the one setting a table actually changes.
+          deckSwitchHtml(true) +
           '<div class="option">' +
             '<span class="option__label">Who judges next?</span>' +
             '<div class="segmented">' +
@@ -684,7 +691,7 @@
           '</div>' +
           '<label class="checkline">' +
             '<input type="checkbox" data-opt="test_mode"' + (o.test_mode ? ' checked' : '') + '>' +
-            '<span>Test mode — start with just ' + root.dataset.testMinPlayers + ' players</span>' +
+            '<span>Test mode</span>' +
           '</label>' +
         '</div>' +
       '</div>'
@@ -716,8 +723,8 @@
         '<p class="panel__code">Code <b>' + CODE + '</b> · ' + count + '/' + state.max_players + ' players</p>' +
         lobbyListHtml(you.is_host) +
         (you.is_host
-          ? deckSwitchHtml(true) +
-            moreSettingsHtml() +
+          ? settingsHtml() +
+            deckWarnHtml() +
             '<button class="btn btn--big btn--go" data-action="start"' + (canStart ? '' : ' disabled') + ' type="button">' +
               (state.can_start
                 ? (deckReady ? 'Start game' : 'Deck not ready')
@@ -1042,8 +1049,8 @@
       return;
     }
 
-    if (hit.dataset.action === 'toggle-more') {
-      moreOpen = !moreOpen;
+    if (hit.dataset.action === 'toggle-settings') {
+      settingsOpen = !settingsOpen;
       render();
       return;
     }

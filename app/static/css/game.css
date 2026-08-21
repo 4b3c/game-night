@@ -683,10 +683,11 @@ button.tcard:active { transform: scale(.98); }
   font-size: 1.2rem;
   letter-spacing: 0;
 }
-/* --- the deck switch: the first thing the host sees ---------------------- */
+/* --- the deck switch, at the top of Settings ----------------------------- */
 /* One control, not three buttons. There used to be a Normal / 18+ / Millennial picker
    here; the deck is one deck now, and this decides whether the 18+ pile is mixed into
-   it. Big enough to hit with a thumb without reading anything. */
+   it. Big enough to hit with a thumb without reading anything — which is also the whole
+   label: four words, no caption under them. */
 .switchline {
   display: flex;
   align-items: center;
@@ -711,19 +712,12 @@ button.tcard:active { transform: scale(.98); }
   font-size: 1.02rem;
   line-height: 1.1;
 }
-.switchline__text small {
-  font-size: .72rem;
-  text-transform: uppercase;
-  letter-spacing: var(--gn-track-label);
-  color: var(--gn-ink-dim);
-}
 /* Off is the loud state: the 18+ pile is in the deck, and that should be readable from
    across the room before anyone starts a game. */
 .switchline:has(input:not(:checked)) {
   background: var(--gn-accent-2);
   color: var(--gn-accent-2-ink);
 }
-.switchline:has(input:not(:checked)) .switchline__text small { color: inherit; opacity: .8; }
 .modeshown { color: var(--gn-ink-dim); font-size: .95rem; }
 .modeshown b { color: var(--gn-ink); font-family: var(--gn-font-display); }
 .panel__warn {
@@ -735,9 +729,9 @@ button.tcard:active { transform: scale(.98); }
   font-weight: 800;
 }
 
-/* --- "More settings" ---------------------------------------------------- */
-.more { width: 100%; display: flex; flex-direction: column; gap: 12px; }
-.more__toggle {
+/* --- the Settings disclosure -------------------------------------------- */
+.settings { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.settings__toggle {
   align-self: center;
   padding: 9px 16px;
   border: var(--gn-outline-sm) solid var(--gn-ink-dim);
@@ -748,10 +742,10 @@ button.tcard:active { transform: scale(.98); }
   font-size: .85rem;
   cursor: pointer;
 }
-.more__toggle:hover { color: var(--gn-ink); border-color: var(--gn-ink); }
-.more__toggle::after { content: ' ▾'; }
-.more__toggle[aria-expanded="true"]::after { content: ' ▴'; }
-.more__body {
+.settings__toggle:hover { color: var(--gn-ink); border-color: var(--gn-ink); }
+.settings__toggle::after { content: ' ▾'; }
+.settings__toggle[aria-expanded="true"]::after { content: ' ▴'; }
+.settings__body {
   padding: 16px 14px;
   border-radius: var(--gn-radius-sm);
   background: rgba(0, 0, 0, .26);
