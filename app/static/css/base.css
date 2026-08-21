@@ -362,9 +362,8 @@ b, strong { font-weight: 900; }
 .startbox__note { color: var(--gn-ink-dim); font-size: .85rem; }
 
 .howto {
-  border: var(--gn-outline) dashed rgba(255, 255, 255, .3);
   border-radius: var(--gn-radius);
-  background: rgba(0, 0, 0, .18);
+  background: rgba(0, 0, 0, .26);
   padding: 20px 18px;
 }
 .howto__title { font-size: 1.25rem; margin-bottom: 14px; }

@@ -40,6 +40,7 @@
   let lastStrip = null;
   let tableKey = null;
   let tablePacking = null;   // which column each answer is in, as a string to diff
+  let handPacking = null;    // the same, for your own hand
   let moreOpen = false; // the "More settings" disclosure, kept across re-renders
 
   const conn = new GN.Connection({
@@ -303,41 +304,46 @@
   }
 
   /**
-   * Put each answer in the column that is currently shortest.
+   * Put each card in the column that is currently shortest.
+   *
+   * Shared by the answer table and your hand: hand it the container whose element
+   * children are the columns, and one {key, ratio, node} per card in reading order.
    *
    * Heights are relative, not measured: a card is as tall as its width divided by its
-   * GIF's ratio, so 1/ratio is a fine stand-in and needs no layout pass. A card whose
-   * GIF hasn't been revealed yet is face down at 4:3, and gets counted as such.
+   * GIF's ratio, so 1/ratio is a fine stand-in and needs no layout pass. A card with no
+   * ratio yet — face down, or a manifest written before GIFs were measured — counts as
+   * 4:3, the box it is sitting in.
    *
    * Cards are *moved* into place with appendChild rather than re-created, so a GIF
-   * already on screen never reloads when the packing shifts around it.
+   * already on screen never reloads when the packing shifts around it. `previous` is the
+   * plan this container was last given, and the returned plan is what to pass next time:
+   * when nothing has moved, nothing is touched. That matters because this runs on every
+   * state broadcast, and re-appending a node mid-flip would restart the flip. The keys
+   * are part of the plan, not just the columns — swap one card for another of the same
+   * shape and the layout is identical, but the new node still has to be put on screen.
    */
-  function packColumns(cards) {
-    const columns = Array.prototype.slice.call(table.querySelectorAll('.tcol'));
+  function packColumns(container, items, previous) {
+    const columns = Array.prototype.slice.call(container.children);
+    if (!columns.length) return previous;
     const heights = columns.map(function () { return 0; });
-    const plan = [];
-    cards.forEach(function (c) {
-      const gif = c.revealed && c.gif ? c.gif : null;
-      const ratio = gif && gif.w && gif.h ? gif.w / gif.h : 4 / 3;
+    const plan = items.map(function (item) {
       let into = 0;
       for (let i = 1; i < heights.length; i++) {
         if (heights[i] < heights[into] - 0.0001) into = i;
       }
-      heights[into] += 1 / ratio;
-      plan.push(into);
+      heights[into] += 1 / (item.ratio || 4 / 3);
+      return into;
     });
-
-    // Only touch the DOM when the answer actually changed — this runs on every state
-    // broadcast, and re-appending nodes mid-flip would restart the flip animation.
-    const signature = plan.join(',') + '|' + columns.length;
-    if (signature === tablePacking) return;
-    tablePacking = signature;
+    const signature = items.map(function (item, i) {
+      return item.key + '@' + plan[i];
+    }).join(',') + '|' + columns.length;
+    if (signature === previous) return previous;
     // appendChild moves a node that already has a parent, so this both re-columns and
     // re-orders in one pass, and leaves every <img> exactly where it was.
-    cards.forEach(function (c, i) {
-      const node = table.querySelector('.tcard[data-slot="' + c.slot + '"]');
-      if (node) columns[plan[i]].appendChild(node);
+    items.forEach(function (item, i) {
+      if (item.node) columns[plan[i]].appendChild(item.node);
     });
+    return signature;
   }
 
   function syncTable(mode) {
@@ -421,7 +427,14 @@
         : '';
     });
 
-    packColumns(cards);
+    tablePacking = packColumns(table, cards.map(function (c) {
+      const gif = c.revealed && c.gif ? c.gif : null;
+      return {
+        key: c.slot,
+        ratio: gif && gif.w && gif.h ? gif.w / gif.h : 0,
+        node: table.querySelector('.tcard[data-slot="' + c.slot + '"]'),
+      };
+    }), tablePacking);
   }
 
   // --- the hand --------------------------------------------------------------
@@ -438,35 +451,67 @@
   }
 
   /**
+   * How many columns your hand packs into.
+   *
+   * One on a phone held upright: three across a 390px screen leaves each card about
+   * 110px wide, and you can't tell a joke from a thumbnail. Three on anything wider —
+   * a laptop, or that same phone turned sideways — where seven cards otherwise scroll
+   * for two screens.
+   */
+  function handColumnCount() {
+    return window.matchMedia('(min-width: 620px)').matches ? 3 : 1;
+  }
+
+  /**
    * Reconcile the hand card by card rather than rebuilding it.
    *
    * Two reasons. Rebuilding restarts every GIF in the hand, which looks like a glitch.
    * And keeping the nodes that stay means the one card that *is* new can announce
    * itself: the replacement you draw after playing deals itself in.
+   *
+   * The columns themselves are only rebuilt when their number changes — turning the
+   * phone sideways — and that does cost every GIF a reload, which is the one moment
+   * nobody is mid-decision.
    */
   function syncHand(enabled) {
     const you = me();
     const cards = (you && you.hand) || [];
     const wanted = cards.map(function (c) { return c.id; });
+
+    const columns = handColumnCount();
+    if (handEl.childElementCount !== columns || !handEl.querySelector('.hcol')) {
+      let html = '';
+      for (let i = 0; i < columns; i++) html += '<div class="hcol"></div>';
+      handEl.innerHTML = html;
+      handPacking = null;
+      // Every card is about to be built again from nothing, and none of them is news --
+      // so this counts as a first fill and nobody deals themselves in.
+      delete handEl.dataset.filled;
+    }
     const firstFill = handEl.dataset.filled !== 'yes';
 
-    // Cards that left the hand (you played them).
-    Array.prototype.slice.call(handEl.children).forEach(function (node) {
+    // Cards that left the hand (you played them). Anything still on screen that the
+    // server no longer says is yours goes, whichever column it ended up in.
+    Array.prototype.forEach.call(handEl.querySelectorAll('.gifcard'), function (node) {
       if (wanted.indexOf(node.dataset.gif) === -1) node.remove();
     });
 
-    // Cards that arrived, in hand order.
-    cards.forEach(function (card, index) {
+    // Hand order, each card carrying its GIF's shape so the packer knows how tall it is
+    // before a byte of picture arrives.
+    const items = cards.map(function (card) {
       let node = handEl.querySelector('.gifcard[data-gif="' + card.id + '"]');
       if (!node) {
         node = buildCardNode(card);
         // Only a card drawn mid-game gets the animation — not the opening seven.
         if (!firstFill) node.classList.add('gifcard--dealt');
       }
-      if (handEl.children[index] !== node) {
-        handEl.insertBefore(node, handEl.children[index] || null);
-      }
+      return {
+        key: card.id,
+        ratio: card.w && card.h ? card.w / card.h : 0,
+        node: node,
+      };
     });
+    handPacking = packColumns(handEl, items, handPacking);
     handEl.dataset.filled = 'yes';
 
     Array.prototype.forEach.call(handEl.querySelectorAll('.gifcard'), function (node) {
@@ -1065,8 +1110,8 @@
     conn.send('set_options', { options: collectOptions() });
   });
 
-  // Resizing across the 620px or 1100px breakpoint changes how many columns the answers
-  // pack into.
+  // Resizing across the 620px or 1100px breakpoint changes how many columns your hand
+  // and the answers pack into.
   window.addEventListener('resize', function () {
     if (state) render();
   });

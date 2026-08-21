@@ -662,9 +662,11 @@ button.tcard:active { transform: scale(.98); }
   gap: 18px;
   width: 100%;
   padding: 16px 14px;
-  border: var(--gn-outline) dashed rgba(255, 255, 255, .28);
   border-radius: var(--gn-radius-sm);
-  background: rgba(0, 0, 0, .22);
+  /* No outline at all: this box only has to read as one group inside the panel it is
+     already sitting in, and a darker well does that without drawing a second frame
+     around the frame. */
+  background: rgba(0, 0, 0, .3);
   text-align: left;
 }
 .option { display: flex; flex-direction: column; gap: 9px; }
@@ -738,7 +740,7 @@ button.tcard:active { transform: scale(.98); }
 .more__toggle {
   align-self: center;
   padding: 9px 16px;
-  border: var(--gn-outline-sm) dashed var(--gn-ink-dim);
+  border: var(--gn-outline-sm) solid var(--gn-ink-dim);
   border-radius: var(--gn-radius-pill);
   background: transparent;
   color: var(--gn-ink-dim);
@@ -751,9 +753,8 @@ button.tcard:active { transform: scale(.98); }
 .more__toggle[aria-expanded="true"]::after { content: ' ▴'; }
 .more__body {
   padding: 16px 14px;
-  border: var(--gn-outline-sm) dashed rgba(255, 255, 255, .28);
   border-radius: var(--gn-radius-sm);
-  background: rgba(0, 0, 0, .18);
+  background: rgba(0, 0, 0, .26);
 }
 
 .segmented {
@@ -817,9 +818,8 @@ button.tcard:active { transform: scale(.98); }
   gap: 7px;
   width: 100%;
   padding: 14px 16px;
-  border: var(--gn-outline) dashed rgba(255, 255, 255, .28);
   border-radius: var(--gn-radius-sm);
-  background: rgba(0, 0, 0, .22);
+  background: rgba(0, 0, 0, .3);
   font-size: .9rem;
   color: var(--gn-ink-dim);
   text-align: left;
@@ -891,12 +891,24 @@ button.tcard:active { transform: scale(.98); }
   letter-spacing: var(--gn-track-label);
   transform: rotate(-1.5deg);
 }
+/* Columns, filled by gah-play.js, for the same reason the answer table has them: a grid
+   makes every card in a row as tall as the tallest one in it, and a <button> centres what
+   it holds — so a 16:9 GIF next to a squarish one sat in a box built for the square with
+   the white mat showing as a band above and below it. A column has no rows to line up, so
+   a card is only ever as tall as its own picture. */
 .hand {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  align-items: flex-start;
   gap: 14px;
   /* room for the tilt, the lift and the hard shadows */
   padding: 11px max(16px, env(safe-area-inset-left)) 13px max(16px, env(safe-area-inset-right));
+}
+.hcol {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1 1 0;
+  min-width: 0;
 }
 .hand--locked { opacity: .8; }
 /* room for the fixed confirm bar while a card is selected */
@@ -904,6 +916,9 @@ button.tcard:active { transform: scale(.98); }
 
 .gifcard {
   position: relative;
+  /* block, not the button default: a button centres its content, which is what turned
+     spare height into a white band across the top of the picture. */
+  display: block;
   /* No fixed shape. A hand scrolls vertically, so a card is as tall as its GIF is —
      which is the whole point: forcing 4:3 and cropping to fill cut the top off the
      tall ones and the sides off the wide ones. Width is the only thing fixed. */
@@ -919,8 +934,8 @@ button.tcard:active { transform: scale(.98); }
     box-shadow var(--gn-pop-ms) var(--gn-ease);
 }
 /* fan them out a touch so it reads as a hand of cards, not a filmstrip */
-.hand .gifcard:nth-child(odd) { transform: rotate(var(--gn-fan-a)); }
-.hand .gifcard:nth-child(even) { transform: rotate(var(--gn-fan-b)) translateY(4px); }
+.hcol .gifcard:nth-child(odd) { transform: rotate(var(--gn-fan-a)); }
+.hcol .gifcard:nth-child(even) { transform: rotate(var(--gn-fan-b)) translateY(4px); }
 .gifcard__img { display: block; width: 100%; height: auto; }
 .gifcard__tick {
   position: absolute;
@@ -939,7 +954,7 @@ button.tcard:active { transform: scale(.98); }
   transform: scale(.4);
   transition: opacity var(--gn-pop-ms) var(--gn-ease), transform var(--gn-pop-ms) var(--gn-ease-bounce);
 }
-.hand .gifcard--selected {
+.hcol .gifcard--selected {
   transform: translateY(-14px) rotate(0deg) scale(1.05);
   box-shadow: 0 0 0 5px var(--gn-accent-3), var(--gn-shadow-lg);
 }
@@ -1016,11 +1031,11 @@ button.tcard:active { transform: scale(.98); }
 }
 @keyframes bar-up { from { transform: translateY(18px); opacity: 0; } }
 
-/* --- bigger screens: give the hand more room ---------------------------
-   And put the table back in a grid: there's room for several answers side by side here,
-   which is the faster read when they all fit anyway. */
+/* --- bigger screens: more columns -------------------------------------
+   Your hand and the answer table both stop being one card wide here: there's room for
+   several side by side, which is the faster read when they all fit anyway. How many is
+   gah-play.js's call — three for the hand, and see below for the table. */
 @media (min-width: 620px) {
-  .hand { grid-template-columns: repeat(2, 1fr); }
   /* 80% of the window, split evenly — three ways here, four on a screen wide enough
      (gah-play.js decides, and never makes more columns than there are answers).
      Answers pack into whichever column is shortest, so seven of them sit snugly
@@ -1036,7 +1051,15 @@ button.tcard:active { transform: scale(.98); }
     gap: 14px;
   }
   .tcol { flex: 1 1 0; gap: 18px; }
-  .tcard { width: 100%; }
+  /* Fill the column, but never past 40% of the window. A three-player round is two
+     answers, and a two-player one is a single answer that would otherwise get the whole
+     80vw table to itself — a card so big you scroll to see the joke. The height cap is
+     the phone rule brought back for the same reason: a portrait GIF 40vw wide is still
+     taller than the screen without it. */
+  .tcard {
+    width: 100%;
+    max-width: min(40vw, calc(74vh * var(--card-arn, 1.3333)));
+  }
   .panel { padding: 30px 26px 26px; }
   .panel__title { font-size: 2rem; }
   .panel .prompt { font-size: 1.4rem; }
