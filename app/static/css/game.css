@@ -806,6 +806,8 @@ button.tcard:active { transform: scale(.98); }
   flex: 0 0 auto;
   accent-color: var(--gn-accent-2);
 }
+.checkline__text { display: flex; flex-direction: column; gap: 2px; }
+.checkline__hint { font-size: .76rem; line-height: 1.35; color: var(--gn-ink-dim); text-wrap: pretty; }
 .optsummary {
   display: flex;
   flex-direction: column;

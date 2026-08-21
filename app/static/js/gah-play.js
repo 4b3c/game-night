@@ -215,7 +215,7 @@
       case 'PROMPT_PICK':
         return !you.is_judge;
       case 'SUBMIT':
-        return you.is_judge || !!you.submitted_gif;
+        return (you.is_judge && !you.is_answering) || !!you.submitted_gif;
       case 'REVEAL':
       case 'PICK_WINNER':
       case 'ROUND_RESULT':
@@ -271,7 +271,7 @@
           avatarHtml(p) +
           '<span class="sscore__name">' + esc(p.nickname) + '</span>' +
           pipsHtml(p.score, target) +
-          (state.phase === 'SUBMIT' && !p.is_judge
+          (state.phase === 'SUBMIT' && p.is_answering
             ? '<span class="sscore__flag">' + (p.has_submitted ? '✅' : '⏳') + '</span>'
             : '') +
           '</div>'
@@ -691,7 +691,10 @@
           '</div>' +
           '<label class="checkline">' +
             '<input type="checkbox" data-opt="test_mode"' + (o.test_mode ? ' checked' : '') + '>' +
-            '<span>Test mode</span>' +
+            '<span class="checkline__text">' +
+              '<span>Test mode</span>' +
+              '<small class="checkline__hint">Start with as few as one player. The judge answers their own prompt, and nothing counts towards the deck\'s stats.</small>' +
+            '</span>' +
           '</label>' +
         '</div>' +
       '</div>'
@@ -747,7 +750,11 @@
         '<section class="panel panel--ready">' +
           '<span class="panel__crown" aria-hidden="true">👑</span>' +
           '<h1 class="panel__title">You\'re the judge</h1>' +
-          '<p class="panel__hint">Everyone else answers, you pick the winner. Take your time.</p>' +
+          '<p class="panel__hint">' +
+            (you.is_answering
+              ? 'You answer this one too, then pick the winner. Take your time.'
+              : 'Everyone else answers, you pick the winner. Take your time.') +
+          '</p>' +
           '<button class="btn btn--big btn--go" data-action="ready" type="button">I\'m ready</button>' +
         '</section>'
       );
@@ -801,7 +808,9 @@
             .map(function (w) { return esc(w.avatar) + ' ' + esc(w.nickname) + (w.connected ? '' : ' (away)'); })
             .join(', ');
 
-    if (you.is_judge) {
+    // A judge who answers too (test mode) drops through to the panels below: they need
+    // their hand, not the no-peeking screen.
+    if (you.is_judge && !you.is_answering) {
       return (
         '<section class="panel panel--blind">' +
           '<p class="panel__label">The prompt</p>' +
@@ -830,7 +839,9 @@
 
     return (
       '<section class="panel panel--answer">' +
-        '<p class="panel__judging">' + esc(judgeName()) + ' is judging</p>' +
+        '<p class="panel__judging">' +
+          (you.is_judge ? 'You\'re judging this one' : esc(judgeName()) + ' is judging') +
+        '</p>' +
         '<p class="prompt prompt--big">' + promptHtml(state.prompt) + '</p>' +
         '<p class="panel__hint">Pick the funniest answer from your GIFs below.</p>' +
       '</section>'
@@ -941,13 +952,13 @@
       let extra = '';
       if (phase === 'ROUND_READY') line = esc(judgeName()) + ' is getting ready.';
       else if (phase === 'PROMPT_PICK') line = esc(judgeName()) + ' is picking a prompt.';
-      else if (phase === 'SUBMIT' && you.is_judge) line = state.submitted_count + ' of ' + state.expected_count + ' answers are in.';
+      else if (phase === 'SUBMIT' && !you.is_answering) line = state.submitted_count + ' of ' + state.expected_count + ' answers are in.';
       else if (phase === 'SUBMIT') line = 'Your GIF is in. ' + state.submitted_count + ' of ' + state.expected_count + ' played.';
       else if (phase === 'REVEAL') line = esc(judgeName()) + ' is flipping the cards.';
       else if (phase === 'PICK_WINNER') line = esc(judgeName()) + ' is deciding.';
       else if (phase === 'ROUND_RESULT') line = 'Round over — next one coming up.';
       else if (phase === 'GAME_OVER') line = 'Game over!';
-      if (phase === 'SUBMIT' && !you.is_judge && you.submitted_gif) {
+      if (phase === 'SUBMIT' && you.submitted_gif) {
         extra = '<img class="playedgif playedgif--small" src="' + gifUrl(you.submitted_gif) + '" alt="The GIF you played">';
       }
       setPanel(lookUpPanel(line, extra));
@@ -968,13 +979,13 @@
       case 'ROUND_READY':
         setPanel(readyPanel());
         table.hidden = true;
-        showHand(you.is_judge ? null : 'peek');
+        showHand(you.is_answering ? 'peek' : null);
         break;
 
       case 'PROMPT_PICK':
         setPanel(promptPickPanel());
         table.hidden = true;
-        showHand(you.is_judge ? null : 'peek');
+        showHand(you.is_answering ? 'peek' : null);
         break;
 
       case 'SUBMIT':
@@ -982,7 +993,7 @@
         table.hidden = true;
         // After you've played, keep the hand on screen in look-don't-touch mode: that's
         // when the replacement card deals itself in, and it's worth seeing.
-        showHand(you.is_judge ? null : (you.submitted_gif ? 'peek' : 'play'));
+        showHand(!you.is_answering ? null : (you.submitted_gif ? 'peek' : 'play'));
         break;
 
       case 'REVEAL':

@@ -126,7 +126,7 @@
         pip.classList.toggle('pip--on', i < p.score);
       });
       const flag = row.querySelector('.tvscore__flag');
-      flag.textContent = state.phase === 'SUBMIT' && !p.is_judge ? (p.has_submitted ? '✅' : '⏳') : '';
+      flag.textContent = state.phase === 'SUBMIT' && p.is_answering ? (p.has_submitted ? '✅' : '⏳') : '';
 
       // Pop the row when a point lands.
       const before = prevScores[p.pid];

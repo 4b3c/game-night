@@ -43,10 +43,11 @@ one: `http://192.168.1.42:5050/ABCD/tv`
    winner. That player gets a point; only the winning card's author is revealed.
 5. First to the target score (default 5) wins. The host can start a rematch in the same room.
 
-4–8 players (2 with **test mode**, for playing with bots). The host gets one switch —
-**keep it clean**, on by default; turn it off and the 18+ cards and prompts are mixed
-in — and everything else (judge rotation, points to win, timers, test mode) lives behind
-*More settings*.
+4–8 players, or down to 1 with **test mode** — there the judge answers their own prompt
+too, so you can walk a whole round on your own, and none of it counts towards the deck's
+statistics. The host gets one switch — **keep it clean**, on by default; turn it off and
+the 18+ cards and prompts are mixed in — and everything else (judge rotation, points to
+win, timers, test mode) lives behind *More settings*.
 
 ## Routes
 

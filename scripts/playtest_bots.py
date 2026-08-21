@@ -8,7 +8,7 @@ It prints a code and the URLs to open. The bots wait in the lobby until enough p
 have joined (you, plus anyone else), start the game, and then play their part — judging,
 answering and moving rounds along. Ctrl-C to send them home.
 
-    --bots 1 --start-at 2     you + one bot (test mode: you judge every other round)
+    --bots 1 --start-at 2     you + one bot (test mode: the judge answers too)
     --bots 7 --start-at 8     a full table
 """
 

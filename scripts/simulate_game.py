@@ -137,7 +137,13 @@ class Bot:
         if not self.sio.connected or self.done.is_set():
             return  # a state packet that landed while we were shutting down
 
-        if you["is_judge"]:
+        # Answering is keyed on is_answering, not on "not the judge": in test mode the
+        # judge plays a card too, and a bot judge that skipped it would stall the round
+        # until the answer timer bailed it out.
+        if phase == "SUBMIT":
+            if you.get("is_answering") and not you["submitted_gif"] and you["hand"]:
+                self.emit("submit_card", {"gif_id": random.choice(you["hand"])["id"]})
+        elif you["is_judge"]:
             if phase == "ROUND_READY":
                 self.emit("judge_ready")
             elif phase == "PROMPT_PICK":
@@ -152,9 +158,6 @@ class Bot:
                 self.emit("pick_winner", {"slot": random.randrange(len(state["cards"]))})
             elif phase == "ROUND_RESULT":
                 self.emit("next_round")
-        else:
-            if phase == "SUBMIT" and not you["submitted_gif"] and you["hand"]:
-                self.emit("submit_card", {"gif_id": random.choice(you["hand"])["id"]})
 
     def check_redaction(self) -> list[str]:
         """A bot should never receive anything it isn't entitled to."""
@@ -209,8 +212,10 @@ def main() -> int:
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
-    if not 2 <= args.players <= 8:
-        print("players must be 2..8")
+    # One is a real game now: in test mode the judge answers their own prompt, so a
+    # table of one plays whole rounds instead of ending them unanswered.
+    if not 1 <= args.players <= 8:
+        print("players must be 1..8")
         return 2
     if not args.timeout:
         args.timeout = 40.0 * args.players

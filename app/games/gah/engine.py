@@ -33,8 +33,8 @@ HAND_SIZE = 7
 PROMPT_CHOICES = 3
 MIN_PLAYERS = 4
 # Test mode goes all the way down to one, so you can start a game and walk the screens
-# on your own. A table of one has nobody to answer the judge, so those rounds end
-# unanswered -- see _end_empty_round.
+# on your own. It also lets the judge answer their own prompt -- otherwise a table of
+# one would have nothing to judge. See _answers.
 TEST_MIN_PLAYERS = 1
 MAX_PLAYERS = 8
 
@@ -250,6 +250,20 @@ class Game:
     def _non_judge_players(self) -> list[Player]:
         return [p for p in self._ordered_players() if p.pid != self.judge_pid]
 
+    def _answers(self, pid: str) -> bool:
+        """Whether this player is expected to play a card this round.
+
+        Everyone but the judge, normally. In test mode the judge answers too: test mode
+        exists so you can walk the whole game yourself, and a table of one whose only
+        player can't play would pick a prompt and immediately end the round with nothing
+        on the table. Answering your own prompt is only a fair round when you're the one
+        testing, which is exactly when this is on.
+        """
+        return pid != self.judge_pid or self.options.test_mode
+
+    def _answering_players(self) -> list[Player]:
+        return [p for p in self._ordered_players() if self._answers(p.pid)]
+
     # -- lobby ---------------------------------------------------------------
     def add_player(self, pid: str, nickname: str) -> Player:
         existing = self.players.get(pid)
@@ -421,15 +435,16 @@ class Game:
         self.phase = Phase.SUBMIT
         self._set_deadline(self.options.submit_seconds)
         self._touch()
-        # A table with nobody to answer -- one player in test mode -- would otherwise sit
-        # on an answer timer waiting for a submission that cannot come, until the ticker
-        # noticed. Settle it here instead, in the same action.
+        # A table with nobody left to answer -- everyone but the judge walked out mid-
+        # round -- would otherwise sit on an answer timer waiting for a submission that
+        # cannot come, until the ticker noticed. Settle it here instead, in the same
+        # action.
         self._maybe_close_submissions()
 
     def submit_card(self, pid: str, gif_id: str) -> None:
         player = self._player(pid)
         self._require_phase(Phase.SUBMIT)
-        if pid == self.judge_pid:
+        if not self._answers(pid):
             raise ActionError("You're the judge this round")
         if any(s.pid == pid for s in self.submissions):
             raise ActionError("You already played a card")
@@ -449,7 +464,7 @@ class Game:
     def _maybe_close_submissions(self) -> bool:
         if self.phase != Phase.SUBMIT:
             return False
-        if len(self.submissions) < len(self._non_judge_players()):
+        if len(self.submissions) < len(self._answering_players()):
             return False
         if not self.submissions:
             self._end_empty_round()
@@ -460,11 +475,10 @@ class Game:
     def _end_empty_round(self) -> None:
         """Nobody answered, so there is nothing to reveal and nothing to judge.
 
-        Two ways to get here. A table of one -- test mode starts that low so you can walk
-        the screens on your own -- and a round where everyone but the judge left before
-        answering. Either way the round ends with no winner, rather than parking the judge
-        in front of an empty table with no way forward. Nothing is recorded either: no
-        cards were played, so there is nothing about the deck to learn.
+        Reachable when everyone but the judge left before answering. The round ends with
+        no winner, rather than parking the judge in front of an empty table with no way
+        forward. Nothing is recorded either: no cards were played, so there is nothing
+        about the deck to learn.
         """
         self.round_winner_pid = None
         self.round_winner_slot = None
@@ -608,7 +622,7 @@ class Game:
 
         elif self.phase == Phase.SUBMIT:
             timed_out = self.deadline is not None and now >= self.deadline
-            pending = [p for p in self._non_judge_players() if not any(s.pid == p.pid for s in self.submissions)]
+            pending = [p for p in self._answering_players() if not any(s.pid == p.pid for s in self.submissions)]
             for player in pending:
                 away_too_long = (
                     not player.connected
@@ -675,6 +689,7 @@ class Game:
             "connected": player.connected,
             "is_host": player.pid == self.host_pid,
             "is_judge": player.pid == self.judge_pid,
+            "is_answering": self._answers(player.pid),
             "has_submitted": any(s.pid == player.pid for s in self.submissions),
         }
 
@@ -709,7 +724,7 @@ class Game:
         deck = self._deck_view()
         waiting_on = [
             {"nickname": p.nickname, "avatar": p.avatar, "connected": p.connected}
-            for p in self._non_judge_players()
+            for p in self._answering_players()
             if not any(s.pid == p.pid for s in self.submissions)
         ] if self.phase == Phase.SUBMIT else []
 
@@ -725,7 +740,7 @@ class Game:
             "prompt": self._prompt_view(),
             "cards": self._card_views(),
             "submitted_count": len(self.submissions),
-            "expected_count": len(self._non_judge_players()),
+            "expected_count": len(self._answering_players()),
             "waiting_on": waiting_on,
             "round_winner_pid": self.round_winner_pid,
             "round_winner_slot": self.round_winner_slot,
@@ -782,6 +797,7 @@ class Game:
             "score": player.score,
             "is_host": pid == self.host_pid,
             "is_judge": pid == self.judge_pid,
+            "is_answering": self._answers(pid),
             "hand": [gifs[g] for g in player.hand if g in gifs],
             "submitted_gif": gifs.get(submitted.gif_id) if submitted else None,
             "submitted_auto": submitted.auto if submitted else False,

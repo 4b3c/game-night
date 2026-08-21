@@ -42,7 +42,11 @@ def make_game(n: int = 4, *, start: bool = False, **options) -> tuple[Game, Cloc
 
 
 def submitters(game: Game) -> list[E.Player]:
-    return [p for p in game.players.values() if p.pid != game.judge_pid]
+    """Everyone who owes the round a card -- which includes the judge in test mode."""
+    return [
+        p for p in game.players.values()
+        if p.pid != game.judge_pid or game.options.test_mode
+    ]
 
 
 def play_round(game: Game, *, winner_pid: str | None = None) -> str:
@@ -813,21 +817,68 @@ def test_test_mode_lets_one_player_start():
     assert game.judge_pid == "p0"
 
 
-def test_a_round_nobody_answered_ends_with_no_winner():
-    """Alone at the table -- or last one standing -- the judge must not be parked in
-    front of an empty reveal with no way forward."""
-    calls, record = recorder()
-    game = Game(code="TEST", host_pid="p0", rng=random.Random(3), now=Clock(), on_round_awarded=record)
-    game.add_player("p0", NAMES[0])
-    game.set_options("p0", {"test_mode": True})
+def test_test_mode_judge_answers_their_own_prompt():
+    """Alone at the table, the judge plays a card too -- otherwise picking a prompt would
+    end the round on the spot and there would be nothing to walk through."""
+    game, _ = make_game(1, test_mode=True)
     game.start_game("p0")
 
     game.judge_ready("p0")
     game.pick_prompt("p0", game.prompt_choice_ids[0])
+    assert game.phase is Phase.SUBMIT, "a table of one still has one answer to wait for"
+
+    game.submit_card("p0", game.players["p0"].hand[0])
+    assert game.phase is Phase.REVEAL
+    game.flip("p0", 0)
+    assert game.phase is Phase.PICK_WINNER
+    game.pick_winner("p0", 0)
+
+    assert game.phase is Phase.ROUND_RESULT
+    assert game.round_winner_pid == "p0"
+    assert game.players["p0"].score == 1
+
+
+def test_test_mode_judge_is_counted_among_the_answers():
+    """The 'x of y played' counters and the waiting-on list have to include the judge,
+    or a test-mode table looks finished while it is still waiting on them."""
+    game, _ = make_game(2, test_mode=True)
+    game.start_game("p0")
+    judge = game.judge_pid
+    game.judge_ready(judge)
+    game.pick_prompt(judge, game.prompt_choice_ids[0])
+
+    state = game.public_state()
+    assert state["expected_count"] == 2
+    assert {w["nickname"] for w in state["waiting_on"]} == {p.nickname for p in game.players.values()}
+    assert all(p["is_answering"] for p in state["players"])
+    assert game.view_for(judge)["you"]["is_answering"] is True
+
+    other = next(pid for pid in game.players if pid != judge)
+    game.submit_card(other, game.players[other].hand[0])
+    assert game.phase is Phase.SUBMIT, "still waiting on the judge's own card"
+    game.submit_card(judge, game.players[judge].hand[0])
+    assert game.phase is Phase.REVEAL
+
+
+def test_a_round_nobody_answered_ends_with_no_winner():
+    """Everyone but the judge walked out mid-round: the judge must not be parked in
+    front of an empty reveal with no way forward."""
+    calls, record = recorder()
+    game = Game(code="TEST", host_pid="p0", rng=random.Random(3), now=Clock(), on_round_awarded=record)
+    for i in range(4):
+        game.add_player(f"p{i}", NAMES[i])
+    game.start_game("p0")
+
+    judge = game.judge_pid
+    game.judge_ready(judge)
+    game.pick_prompt(judge, game.prompt_choice_ids[0])
+    for pid in [p for p in list(game.players) if p != judge]:
+        game.remove_player(pid)
+    game.tick()
 
     assert game.phase is Phase.ROUND_RESULT
     assert game.round_winner_pid is None and game.round_winner_slot is None
     assert calls == [], "an unanswered round has no cards to count"
 
-    game.next_round("p0")
+    game.next_round(judge)
     assert game.phase is Phase.ROUND_READY
