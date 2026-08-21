@@ -79,14 +79,18 @@ The bots wait for you to join, start the game, and play their part.
 and timing as a CSS custom property. Change a value, reload. No build step, no npm.
 
 **The prompts** — write them in the curator's **Prompts** tab, or edit
-`curation/prompts.json` directly: one entry per prompt, keyed by id, with `___` marking
-the blank and `sets` naming the pile it's in.
+`curation/prompts.json` directly: one entry per prompt, keyed by id, with `sets` naming
+the pile it's in and `___` marking a blank if the prompt has one.
 
-The deck also ships the real **Cards Against Humanity** black cards — 842 of them, in the
-18+ pile, so they only turn up when the host switches "keep it clean" off. CAH release
-their own game under CC BY-NC-SA 4.0, which is what makes that legal; the terms that come
-with it are in [LICENSE-PROMPTS.md](LICENSE-PROMPTS.md), and the import is
-`scripts/import_cah_prompts.py`.
+The deck that ships is 100 original prompts, 50 in each pile, and they're headlines
+rather than fill-in-the-blanks — *"What the Ring camera picked up:"*, *"My Roman
+Empire:"* — because the answer is a picture, and a picture reads better under a caption
+than jammed into the middle of a sentence.
+
+The real **Cards Against Humanity** black cards are a supported import rather than part
+of the deck: CAH release their own game under CC BY-NC-SA 4.0, the terms that come with
+it are in [LICENSE-PROMPTS.md](LICENSE-PROMPTS.md), and
+`scripts/import_cah_prompts.py` puts them in the 18+ pile if you want them.
 
 **The GIFs** — use the curator below. Aim for 56+ in the Normal pile so eight hands of
 seven don't recycle constantly.
