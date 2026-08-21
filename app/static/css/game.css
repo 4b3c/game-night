@@ -621,6 +621,10 @@ button.tcard:active { transform: scale(.98); }
   width: min(100%, 300px);
   height: auto;
   background: var(--gn-gif-mat);
+  /* Stop the mat at the inside of the border. Painted to the border box it reaches the
+     rounded outer edge, and the antialiased pixels there came out as a pale hairline
+     round the picture -- the same one .gifcard had. */
+  background-clip: padding-box;
   border: var(--gn-outline-lg) solid var(--gn-outline-color);
   border-radius: var(--gn-radius-sm);
   box-shadow: var(--gn-shadow);
@@ -922,7 +926,12 @@ button.tcard:active { transform: scale(.98); }
   overflow: hidden;
   border: var(--gn-outline) solid var(--gn-outline-color);
   border-radius: var(--gn-radius-sm);
-  background: var(--gn-gif-mat);
+  /* Ink, not the mat. The card is tilted, so its edges land on fractions of a device
+     pixel and the seam pixel between the border and the picture is a blend of the two --
+     with a white mat behind that came out as a pale hairline broken up round every card.
+     The mat moves onto the picture itself (see .gifcard__img), which is the only thing
+     that ever needed it. */
+  background: var(--gn-outline-color);
   box-shadow: var(--gn-shadow);
   cursor: pointer;
   transition:
@@ -932,7 +941,8 @@ button.tcard:active { transform: scale(.98); }
 /* fan them out a touch so it reads as a hand of cards, not a filmstrip */
 .hcol .gifcard:nth-child(odd) { transform: rotate(var(--gn-fan-a)); }
 .hcol .gifcard:nth-child(even) { transform: rotate(var(--gn-fan-b)) translateY(4px); }
-.gifcard__img { display: block; width: 100%; height: auto; }
+/* The mat lives here: plenty of GIFs are transparent and were drawn against white. */
+.gifcard__img { display: block; width: 100%; height: auto; background: var(--gn-gif-mat); }
 .gifcard__tick {
   position: absolute;
   top: 7px;
