@@ -339,6 +339,79 @@ def count_frames(path: Path) -> int:
         return 0
 
 
+def trim_transparent_padding(path: Path) -> bool:
+    """Crop fully transparent margins off a GIF. True if the file was rewritten.
+
+    Cards sit on a white mat, because plenty of GIFs are transparent and were drawn
+    against white. A GIF that also carries transparent *padding* -- a tall clip pasted
+    into a wider canvas, which is a rendition artefact, not a picture -- turns that mat
+    into white bars down the sides of the card. The padding is nothing, so cut it off and
+    the card becomes the shape of the actual picture.
+
+    Only fully transparent margins. White pixels are left exactly where they are: half
+    this deck is caption memes, and the white banner over the picture *is* the joke.
+    """
+    try:
+        from PIL import Image
+    except Exception:  # noqa: BLE001 — trimming is a nicety, never a requirement
+        return False
+
+    with Image.open(path) as image:
+        count = getattr(image, "n_frames", 1)
+        durations, disposals, frames, box = [], [], [], None
+        for index in range(count):
+            image.seek(index)
+            durations.append(image.info.get("duration", 100))
+            disposals.append(getattr(image, "disposal_method", 1))
+            frame = image.convert("RGBA")
+            frames.append(frame)
+            # The union across frames, not frame one: a later frame may reach further,
+            # and cropping to the first one would clip the animation.
+            edges = frame.getchannel("A").getbbox()
+            if edges is None:
+                continue
+            box = edges if box is None else (
+                min(box[0], edges[0]), min(box[1], edges[1]),
+                max(box[2], edges[2]), max(box[3], edges[3]),
+            )
+        loop = image.info.get("loop", 0)
+        width, height = image.size
+
+    if box is None:
+        return False  # every frame is empty; not ours to fix
+    padding = max(box[0], box[1], width - box[2], height - box[3])
+    # A pixel or two is antialiasing round the edge of the picture, not padding, and
+    # re-encoding costs a little quality -- so only bother when there is a bar to cut.
+    if padding < 3:
+        return False
+
+    palette = []
+    for frame in frames:
+        cropped = frame.crop(box)
+        # 255 colours, so the last index is free to mean "transparent" -- a GIF has no
+        # alpha channel, only one see-through entry in its palette.
+        flat = cropped.convert("RGB").convert("P", palette=Image.ADAPTIVE, colors=255)
+        flat.paste(255, cropped.getchannel("A").point(lambda a: 255 if a <= 128 else 0))
+        palette.append(flat)
+    # Pillow's optimiser writes each frame as only the rectangle that changed, with the
+    # rest left transparent -- which reads as "keep the frame underneath", and that is
+    # only true under disposal 1. A GIF that clears to background between frames has to
+    # be written whole or the animation comes apart. Whole frames cost about four times
+    # the bytes, hence the two paths.
+    keeps_previous = all(method <= 1 for method in disposals)
+    palette[0].save(
+        path,
+        save_all=True,
+        append_images=palette[1:],
+        duration=durations,
+        loop=loop,
+        transparency=255,
+        disposal=1 if keeps_previous else disposals,
+        optimize=keeps_previous,
+    )
+    return True
+
+
 def _measure(path: Path) -> tuple[int, int]:
     """A GIF's pixel size, or (0, 0) if Pillow isn't installed or the file isn't here."""
     try:
@@ -447,10 +520,12 @@ class Library:
         with urllib.request.urlopen(request_obj, timeout=30) as response:
             payload = response.read()
         (GIF_DIR / filename).write_bytes(payload)
-        # A link with an expiry can't bring this card back tomorrow, so keep the bytes.
+        # A link with an expiry can't bring this card back tomorrow, so keep the bytes --
+        # untrimmed, because that is the copy the card gets rebuilt from.
         if candidate.get("url") and keep_original(candidate["url"]):
             ORIGINALS.mkdir(parents=True, exist_ok=True)
             (ORIGINALS / filename).write_bytes(payload)
+        trim_transparent_padding(GIF_DIR / filename)
         return filename
 
     # -- the library: what is already in the game --------------------------

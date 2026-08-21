@@ -17,6 +17,8 @@ import threading
 from pathlib import Path
 from typing import Callable
 
+from ...assets import file_token
+
 APP_DIR = Path(__file__).resolve().parents[2]
 PROMPTS_PATH = APP_DIR.parent / "curation" / "prompts.json"
 GIF_MANIFEST_PATH = APP_DIR / "static" / "gifs" / "manifest.json"
@@ -117,13 +119,20 @@ def _read_manifest() -> tuple[tuple[dict, ...], dict[str, dict]]:
     for g in rows:
         if not g.get("id") or not g.get("file"):
             continue
-        if not (GIF_MANIFEST_PATH.parent / g["file"]).is_file():
+        token = file_token(GIF_MANIFEST_PATH.parent / g["file"])
+        if token is None:
             missing += 1
             continue
         entry = {
             "id": g["id"],
             "file": g["file"],
             "label": g.get("label", g["id"]),
+            # The client hangs this on the URL as `?v=`. A GIF folder is one long-lived
+            # path behind a CDN that caches for a week, so re-curating a card under the
+            # same filename would otherwise never reach anyone. Worked out here rather
+            # than stored in the manifest: the file is the truth, and this runs again
+            # every time the manifest changes.
+            "v": token,
             # Which pile this card is in — Normal or 18+. Written by
             # scripts/curate_gifs.py. `rating` is the older single-tag form.
             "sets": _sets_of(g),

@@ -63,7 +63,8 @@
   // --- helpers ---------------------------------------------------------------
   function esc(v) { return GN.esc(v); }
 
-  function gifUrl(gif) { return GIF_BASE + gif.file; }
+  // `?v=` is the card's fingerprint — see gah-play.js.
+  function gifUrl(gif) { return GIF_BASE + gif.file + (gif.v ? '?v=' + encodeURIComponent(gif.v) : ''); }
 
   function judge() {
     return state.players.filter(function (p) { return p.is_judge; })[0] || null;

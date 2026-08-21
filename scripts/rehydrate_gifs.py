@@ -47,6 +47,7 @@ from curate_gifs import (  # noqa: E402 — needs the path above
     _pretty_label,
     load_dotenv,
     resolve_media,
+    trim_transparent_padding,
 )
 import curation_store as store  # noqa: E402
 
@@ -74,6 +75,10 @@ def _download(url: str, target: Path) -> int:
     temporary = target.with_suffix(".part")
     temporary.write_bytes(payload)
     temporary.replace(target)
+    # Giphy hands back some clips pasted into a wider canvas. That padding is transparent,
+    # and the card's white mat turns it into bars down the sides -- so cut it off here,
+    # where every rebuilt deck goes through, rather than fixing files by hand.
+    trim_transparent_padding(target)
     return len(payload)
 
 

@@ -115,7 +115,10 @@
   }
 
   function gifUrl(gif) {
-    return GIF_BASE + gif.file;
+    // `?v=` is the card's fingerprint, from the server. A GIF folder is one long-lived
+    // path behind a CDN that caches for a week, so a re-curated card under the same
+    // filename would never reach anyone without it.
+    return GIF_BASE + gif.file + (gif.v ? '?v=' + encodeURIComponent(gif.v) : '');
   }
 
   /**
